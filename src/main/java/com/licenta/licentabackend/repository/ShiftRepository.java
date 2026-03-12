@@ -1,6 +1,6 @@
 package com.licenta.licentabackend.repository;
 
-import com.licenta.licentabackend.domain.Tura;
+import com.licenta.licentabackend.domain.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -8,12 +8,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface TuraRepository extends JpaRepository<Tura, Long> {
+public interface ShiftRepository extends JpaRepository<Shift, Long> {
 
     // Spring citește numele metodei "findByDataTurei" și generează automat query-ul:
     // SELECT * FROM ture WHERE data_turei = ?
-    List<Tura> findByDataTurei(LocalDate dataTurei);
+    List<Shift> findByShiftDate(LocalDate shiftDate);
 
     // Toate turele unui anumit angajat
-    List<Tura> findByAngajatId(Long angajatId);
+    List<Shift> findByEmployeeId(Long employeeId);
 }
