@@ -1,6 +1,9 @@
 package com.licenta.licentabackend.service;
 
 import com.licenta.licentabackend.dto.DayForecastDto;
+import com.licenta.licentabackend.exceptions.FailedReadingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -12,6 +15,9 @@ import java.util.List;
 
 @Service
 public class CsvReaderService {
+
+    private static final Logger log = LoggerFactory.getLogger(CsvReaderService.class);
+
     public List<DayForecastDto> readDataFromCsv(String filePath) {
         List<DayForecastDto> plannedDays = new ArrayList<>();
 
@@ -46,10 +52,10 @@ public class CsvReaderService {
                     plannedDays.add(dayDto);
                 }
             }
-            System.out.println("✅ Successfully read " + plannedDays.size() + " days from the CSV file!");
+            log.info("✅ Successfully read {} days from the CSV file!", plannedDays.size());
 
         } catch (Exception e) {
-            System.err.println("❌ Error reading CSV file: " + e.getMessage());
+            throw new FailedReadingException("❌ Error reading CSV file: " + e.getMessage());
         }
 
         return plannedDays;

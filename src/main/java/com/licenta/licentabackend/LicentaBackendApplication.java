@@ -18,10 +18,6 @@ public class LicentaBackendApplication {
         return args -> {
             String filePath = "E:\\An3\\Licenta\\PrognozaDeVenit.csv";
             var forecastDays = csvReaderService.readDataFromCsv(filePath);
-
-            for (var day : forecastDays) {
-                System.out.println(day);
-            }
         };
     }
 
