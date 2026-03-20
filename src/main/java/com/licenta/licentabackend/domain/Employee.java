@@ -22,9 +22,6 @@ public class Employee {
     @Column(name = "remaining_leave_days")
     private Integer remainingLeaveDays;
 
-    @Column(name = "worked_hours_current_month")
-    private Integer workedHoursCurrentMonth;
-
     @Column(name = "holiday_recovery_hours")
     private Integer holidayRecoveryHours;
 
@@ -75,14 +72,6 @@ public class Employee {
 
     public void setRemainingLeaveDays(Integer remainingLeaveDays) {
         this.remainingLeaveDays = remainingLeaveDays;
-    }
-
-    public Integer getWorkedHoursCurrentMonth() {
-        return workedHoursCurrentMonth;
-    }
-
-    public void setWorkedHoursCurrentMonth(Integer workedHoursCurrentMonth) {
-        this.workedHoursCurrentMonth = workedHoursCurrentMonth;
     }
 
     public Integer getHolidayRecoveryHours() {
