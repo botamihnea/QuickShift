@@ -15,7 +15,7 @@ public class Shift {
     private LocalDate shiftDate;
 
     @Column(name = "shift_type", nullable = false)
-    private String shiftType; // Ex: "SHIFT_1_10_18", "PART_TIME_16_20"
+    private String shiftType; // Ex: "SHIFT_1_10_18", "PART_TIME_16_20", "PART_TIME_16_22"
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)

@@ -3,9 +3,9 @@ package com.licenta.licentabackend.dto;
 import java.time.LocalDate;
 
 public class DayForecastDto {
-    private LocalDate date;
-    private Integer salesForecast;
-    private Boolean receptionDay;
+    private final LocalDate date;
+    private final Integer salesForecast;
+    private final Boolean receptionDay;
 
     public DayForecastDto(LocalDate date, Integer salesForecast, Boolean receptionDay) {
         this.date = date;

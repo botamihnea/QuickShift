@@ -55,7 +55,7 @@ public class Employee {
     }
 
     public void setContractType(String contractType) {
-        this.contractType = contractType;
+        this.contractType = contractType; //FULL_TIME_8H, PART_TIME_4H, PART_TIME_6H
     }
 
     public String getRole() {
