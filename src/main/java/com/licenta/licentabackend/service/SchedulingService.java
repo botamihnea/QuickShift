@@ -44,9 +44,9 @@ public class SchedulingService {
 
         List<Shift> shiftsToSave = new ArrayList<>();
 
-        for (int d = 0; d < forecastDays.size(); d++) {
+        for (int day = 0; day < forecastDays.size(); day++) {
 
-            DayForecastDto dayForecast = forecastDays.get(d);
+            DayForecastDto dayForecast = forecastDays.get(day);
 
             if (dayForecast.getDate().getDayOfWeek() == DayOfWeek.MONDAY) {
                 trackers.forEach(EmployeeTracker::resetWeeklyHours);
@@ -62,8 +62,8 @@ public class SchedulingService {
             boolean isReceptionDay = dayForecast.getReceptionDay();
             boolean isDayBeforeReception = false;
 
-            if (d + 1 < forecastDays.size()) {
-                isDayBeforeReception = forecastDays.get(d + 1).getReceptionDay();
+            if (day + 1 < forecastDays.size()) {
+                isDayBeforeReception = forecastDays.get(day + 1).getReceptionDay();
             }
 
             if (isThursdayToSunday || isReceptionDay || isDayBeforeReception) {
@@ -100,60 +100,25 @@ public class SchedulingService {
 
             for (int man = 0; man < totalMenRequired; man++) {
 
-                EmployeeTracker chosenTracker = null;
-                int actualShiftDuration = 0;
-                String actualShiftType = "";
-                boolean countAsMorning = false;
+                boolean needsMorning = currentMorningCount < targetMorning;
 
-                for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
-                    EmployeeTracker candidate = availableTrackers.get(tracker);
-                    String contract = candidate.getEmployee().getContractType();
+                ShiftAssignment matchedAssignment = findBestCandidateForSlot(availableTrackers, needsMorning);
 
-                    int tempDuration = 0;
-                    String tempType = "";
-                    boolean isMorningCandidate = false;
-
-                    if (contract != null && contract.equals("FULL_TIME_8H")) {
-                        tempDuration = 8;
-                        if (currentMorningCount < targetMorning) {
-                            tempType = "SHIFT_1_10_18";
-                            isMorningCandidate = true;
-                        } else {
-                            tempType = "SHIFT_2_14_22";
-                            isMorningCandidate = false;
-                        }
-                    } else if (contract != null && contract.equals("PART_TIME_4H")) {
-                        tempDuration = 4;
-                        tempType = "PART_TIME_16_20";
-                        isMorningCandidate = false;
-                    }
-                    else if (contract != null && contract.equals("PART_TIME_6H")) {
-                        tempDuration = 6;
-                        tempType = "PART_TIME_16_22";
-                        isMorningCandidate = false;
-                    }
-                    if (canWorkMoreHoursThisWeek(candidate, tempDuration)) {
-                        chosenTracker = candidate;
-                        actualShiftDuration = tempDuration;
-                        actualShiftType = tempType;
-                        countAsMorning = isMorningCandidate;
-
-                        availableTrackers.remove(tracker);
-                        break;// we assign him to a shift once per day
-                    }
-                }
-                if (chosenTracker == null) {
-                    log.warn("Did not find employee on slot {} from {} necessary for day {}", man + 1, totalMenRequired, dayForecast.getDate());
+                if (matchedAssignment == null) {
+                    log.warn("Did not find an employee on slot {} from {} necessary on day {}", man + 1, totalMenRequired, dayForecast.getDate());
                     break;
                 }
 
-                if (countAsMorning) {
+                EmployeeTracker chosenTracker = matchedAssignment.tracker;
+
+                if (matchedAssignment.proposal.isMorning) {
                     currentMorningCount++;
-                } else {
+                }
+                else {
                     currentEveningCount++;
                 }
 
-                assignEmployeesToShift(shiftsToSave, assignedToday, actualShiftDuration, chosenTracker, dayForecast, actualShiftType);
+                assignEmployeesToShift(shiftsToSave, assignedToday, matchedAssignment.proposal.duration, chosenTracker, dayForecast, matchedAssignment.proposal.type);
             }
 
             for (EmployeeTracker tracker : trackers) {
@@ -168,6 +133,61 @@ public class SchedulingService {
         log.info("✅ Successfully generated and saved {} shifts in the database!", shiftsToSave.size());
     }
 
+    private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning) {
+
+        // We search for someone who PREFERS this shift
+        for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
+            EmployeeTracker candidate = availableTrackers.get(tracker);
+            ShiftProposal proposal = generateShiftProposal(candidate, needsMorning);
+
+            if (canWorkMoreHoursThisWeek(candidate, proposal.duration)) {
+                String pref = candidate.getEmployee().getShiftPreference();
+
+                boolean isMatch = (pref == null || pref.isBlank() || pref.equalsIgnoreCase("ANY"));
+                if (needsMorning && "MORNING".equalsIgnoreCase(pref)) isMatch = true;
+                if (!needsMorning && "EVENING".equalsIgnoreCase(pref)) isMatch = true;
+
+                if (isMatch) {
+                    availableTrackers.remove(tracker);
+                    return new ShiftAssignment(candidate, proposal);
+                }
+            }
+        }
+
+        // Step 2: Fallback. No one wants the shift so we take the first person available legally.
+        for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
+            EmployeeTracker candidate = availableTrackers.get(tracker);
+            ShiftProposal proposal = generateShiftProposal(candidate, needsMorning);
+
+            if (canWorkMoreHoursThisWeek(candidate, proposal.duration)) {
+                availableTrackers.remove(tracker);
+                return new ShiftAssignment(candidate, proposal);
+            }
+        }
+
+        return null; // No men available
+    }
+
+    private ShiftProposal generateShiftProposal (EmployeeTracker candidate, boolean needsMorning) {
+        String contract = candidate.getEmployee().getContractType();
+
+        if ("FULL_TIME_8H".equals(contract)) {
+            return needsMorning ?
+                    new ShiftProposal(8, "SHIFT_1_10_18", true) :
+                    new ShiftProposal(8, "SHIFT_2_14_22", false);
+        } else if ("PART_TIME_4H".equals(contract)) {
+            return  needsMorning ?
+                    new ShiftProposal(4, "PART_TIME_10_14", true) :
+                    new ShiftProposal(4, "PART_TIME_16_20", false);
+        } else if ("PART_TIME_6H".equals(contract)) {
+            return needsMorning ?
+                    new ShiftProposal(6, "PART_TIME_10_16", true) :
+                    new ShiftProposal(6, "PART_TIME_16_22", false);
+        }
+
+        return  new ShiftProposal (8, "UNKNOWN", needsMorning); // SPECIAL CASE WHEN THE EMPLOYEE HAS CORRUPTED DATA IN THE DB
+    }
+
     private boolean canWorkMoreHoursThisWeek(EmployeeTracker tracker, int incomingHoursOnShift) {
         int futureHours = tracker.getWorkedHoursCurrentWeek() + incomingHoursOnShift;
         String contract = tracker.getEmployee().getContractType();
@@ -179,7 +199,7 @@ public class SchedulingService {
                 return futureHours <= 30;
             }
             if (contract.equals("PART_TIME_4H")) {
-                return futureHours < 20;
+                return futureHours <= 20;
             }
         }
         return false;
@@ -195,6 +215,28 @@ public class SchedulingService {
         shift.setShiftType(actualShiftType);
         shift.setShiftDate(dayForecast.getDate());
         shiftsToSave.add(shift);
+    }
+
+    private static class ShiftProposal {
+        int duration;
+        String type;
+        boolean isMorning;
+
+        public ShiftProposal (int duration, String type, boolean isMorning) {
+            this.duration = duration;
+            this.type = type;
+            this.isMorning = isMorning;
+        }
+    }
+
+    private static class ShiftAssignment {
+        EmployeeTracker tracker;
+        ShiftProposal proposal;
+
+        public ShiftAssignment (EmployeeTracker tracker, ShiftProposal proposal) {
+            this.tracker = tracker;
+            this.proposal = proposal;
+        }
     }
 
 }
