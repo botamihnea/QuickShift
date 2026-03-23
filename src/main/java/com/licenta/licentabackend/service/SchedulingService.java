@@ -56,8 +56,7 @@ public class SchedulingService {
             int targetEvening = 1;
 
             DayOfWeek dow = dayForecast.getDate().getDayOfWeek();
-            boolean isThursdayToSunday = (dow == DayOfWeek.SATURDAY) || (dow == DayOfWeek.SUNDAY) ||
-                    (dow == DayOfWeek.FRIDAY) || (dow == DayOfWeek.THURSDAY);
+            boolean isWeekend = (dow == DayOfWeek.SATURDAY) || (dow == DayOfWeek.SUNDAY);
 
             boolean isReceptionDay = dayForecast.getReceptionDay();
             boolean isDayBeforeReception = false;
@@ -66,7 +65,7 @@ public class SchedulingService {
                 isDayBeforeReception = forecastDays.get(day + 1).getReceptionDay();
             }
 
-            if (isThursdayToSunday || isReceptionDay || isDayBeforeReception) {
+            if (isWeekend || isReceptionDay || isDayBeforeReception) {
                 targetMorning = 2;
                 targetEvening = 2;
                 log.info("HR Rule activated - we need at least 2 people on day {}.", dayForecast.getDate());
@@ -74,12 +73,12 @@ public class SchedulingService {
 
             int projectedSale = dayForecast.getSalesForecast();
 
-            if (projectedSale > 3000) {
+            if (projectedSale > 2000) {
                 targetEvening++; // ZI AGLOMERATA - ADAUGAM INCA UN OM
                 log.info("Big sales estimated ({}) for {}. Upped to {} people on the evening shift.",
                         projectedSale, dayForecast.getDate(), targetEvening);
             }
-            if (projectedSale > 7000) {
+            if (projectedSale > 5000) {
                 targetMorning++; // ZI EXCEPTIONALA - 1 MARTIE, 8 MARTIE , ETC
                 log.info("!!! Massive sales forecast ({}) for {}. Upped to {} people on the morning shift.",
                         projectedSale, dayForecast.getDate(), targetMorning);
@@ -102,7 +101,10 @@ public class SchedulingService {
 
                 boolean needsMorning = currentMorningCount < targetMorning;
 
-                ShiftAssignment matchedAssignment = findBestCandidateForSlot(availableTrackers, needsMorning);
+                boolean requiresFullTime = (needsMorning && currentMorningCount == 0) ||
+                        (!needsMorning && currentEveningCount == 0);
+
+                ShiftAssignment matchedAssignment = findBestCandidateForSlot(availableTrackers, needsMorning, requiresFullTime);
 
                 if (matchedAssignment == null) {
                     log.warn("Did not find an employee on slot {} from {} necessary on day {}", man + 1, totalMenRequired, dayForecast.getDate());
@@ -133,11 +135,17 @@ public class SchedulingService {
         log.info("✅ Successfully generated and saved {} shifts in the database!", shiftsToSave.size());
     }
 
-    private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning) {
+    private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning, boolean requiresFullTime) {
 
         // We search for someone who PREFERS this shift
         for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
             EmployeeTracker candidate = availableTrackers.get(tracker);
+
+            String contract = candidate.getEmployee().getContractType();
+            if (requiresFullTime && (contract == null || !contract.equals("FULL_TIME_8H"))) {
+                continue;
+            }
+
             ShiftProposal proposal = generateShiftProposal(candidate, needsMorning);
 
             if (canWorkMoreHoursThisWeek(candidate, proposal.duration)) {
@@ -157,6 +165,12 @@ public class SchedulingService {
         // Step 2: Fallback. No one wants the shift so we take the first person available legally.
         for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
             EmployeeTracker candidate = availableTrackers.get(tracker);
+
+            String contract = candidate.getEmployee().getContractType();
+            if (requiresFullTime && (contract == null || !contract.equals("FULL_TIME_8H"))) {
+                continue;
+            }
+
             ShiftProposal proposal = generateShiftProposal(candidate, needsMorning);
 
             if (canWorkMoreHoursThisWeek(candidate, proposal.duration)) {

@@ -32,34 +32,40 @@ public class LicentaBackendApplication {
             log.info("Starting application logic...");
 
             shiftRepository.deleteAll(); //momentan pentru a tine db ul liber
+            //employeeRepository.deleteAll();
 
             if (employeeRepository.count() == 0) {
                 log.info("No employees found in DB. Seeding initial test data...");
 
-                Employee emp1 = new Employee();
-                emp1.setFullName("Maria Popescu");
-                emp1.setRole("MANAGER");
+                Employee emp1= new Employee();
+                emp1.setFullName("Mihai Dumitrescu");
+                emp1.setRole("FLORIST");
                 emp1.setContractType("FULL_TIME_8H");
+                emp1.setShiftPreference("MORNING"); // Will prioritize SHIFT_1
 
                 Employee emp2 = new Employee();
-                emp2.setFullName("Elena Ionescu");
+                emp2.setFullName("Andreea Munteanu");
                 emp2.setRole("FLORIST");
                 emp2.setContractType("FULL_TIME_8H");
+                emp2.setShiftPreference("EVENING"); // Will prioritize SHIFT_2
 
                 Employee emp3 = new Employee();
-                emp3.setFullName("Ioana Radu");
+                emp3.setFullName("Florin Neagu");
                 emp3.setRole("FLORIST");
                 emp3.setContractType("FULL_TIME_8H");
+                emp3.setShiftPreference("ANY"); // Flexible, algorithm decides based on needs
 
                 Employee emp4 = new Employee();
-                emp4.setFullName("Andrei Vasile");
+                emp4.setFullName("Diana Constantin");
                 emp4.setRole("FLORIST");
-                emp4.setContractType("FULL_TIME_8H");
+                emp4.setContractType("PART_TIME_6H"); // Testing the 6-hour logic
+                emp4.setShiftPreference("EVENING"); // This will force her into the evening slots!
 
                 Employee emp5 = new Employee();
-                emp5.setFullName("Ana Stan");
+                emp5.setFullName("Bogdan Marin");
                 emp5.setRole("FLORIST");
                 emp5.setContractType("PART_TIME_4H");
+                emp5.setShiftPreference("MORNING");
 
                 List<Employee> employees = List.of(emp1, emp2, emp3, emp4, emp5);
 
