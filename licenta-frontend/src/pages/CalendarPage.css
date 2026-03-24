@@ -1,0 +1,244 @@
+.page-shell {
+  min-height: 100svh;
+  width: min(1680px, 98vw);
+  margin: 0 auto;
+  padding: 1rem 0 1.5rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.top-bar,
+.calendar-panel {
+  border: 1px solid var(--surface-border);
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  padding: clamp(1rem, 0.92rem + 0.8vw, 1.6rem);
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+}
+
+.brand {
+  margin: 0;
+  color: var(--brand-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font: 700 0.76rem/1 var(--font-ui);
+}
+
+h1 {
+  margin: 0.35rem 0 0;
+  color: var(--ink-strong);
+  font: 700 clamp(1.4rem, 1.1rem + 1.5vw, 2.1rem) / 1.08 var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.generate-btn {
+  border: 0;
+  border-radius: 16px;
+  padding: 0.86rem 1.3rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  font: 700 0.95rem/1 var(--font-ui);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+  box-shadow: 0 10px 22px rgb(214 88 66 / 30%);
+}
+
+.generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgb(214 88 66 / 38%);
+}
+
+.generate-btn:focus-visible {
+  outline: 3px solid rgb(42 124 105 / 45%);
+  outline-offset: 2px;
+}
+
+.generate-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.calendar-panel {
+  min-height: 82svh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.8rem;
+}
+
+.calendar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+
+.meta {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 0.9rem;
+}
+
+.status {
+  margin: 0;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font: 600 0.8rem/1 var(--font-ui);
+}
+
+.status.success {
+  color: #125645;
+  background: rgb(211 247 236);
+}
+
+.status.error {
+  color: #803426;
+  background: rgb(255 221 214);
+}
+
+.calendar-wrap {
+  border-radius: 18px;
+  border: 1px solid var(--surface-border);
+  background: #fff;
+  overflow: hidden;
+  min-height: 70svh;
+}
+
+.loading {
+  margin: 0;
+  height: 70svh;
+  display: grid;
+  place-items: center;
+  color: var(--ink-subtle);
+}
+
+.quickshift-calendar {
+  height: 70svh;
+  min-height: 640px;
+}
+
+.quickshift-calendar .rbc-toolbar {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.quickshift-calendar .rbc-toolbar button {
+  border-color: var(--surface-border);
+  border-radius: 10px;
+  color: var(--ink-muted);
+}
+
+.quickshift-calendar .rbc-toolbar button.rbc-active,
+.quickshift-calendar .rbc-toolbar button:active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.quickshift-calendar .rbc-header {
+  padding: 0.5rem 0.2rem;
+  color: var(--ink-strong);
+  font: 700 0.82rem/1 var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quickshift-calendar .rbc-event {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.17rem 0.3rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.quickshift-calendar .rbc-month-view .rbc-event {
+  padding: 0.2rem 0.35rem;
+  font-size: 0.7rem;
+}
+
+.quickshift-calendar .rbc-time-view .rbc-event,
+.quickshift-calendar .rbc-day-view .rbc-event {
+  padding: 0.1rem 0.26rem;
+  font-size: 0.62rem;
+}
+
+.shift-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  overflow: hidden;
+}
+
+.shift-employee,
+.shift-time {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shift-employee {
+  font-weight: 700;
+}
+
+.shift-time {
+  font-size: 0.62rem;
+  opacity: 0.94;
+}
+
+.quickshift-calendar .rbc-time-view .shift-time {
+  font-size: 0.58rem;
+}
+
+.quickshift-calendar .rbc-event.event-full-time {
+  background: linear-gradient(145deg, #2eb193, #2a947d);
+}
+
+.quickshift-calendar .rbc-event.event-part-time {
+  background: linear-gradient(145deg, #ec8f49, #db7332);
+}
+
+.quickshift-calendar .rbc-today {
+  background: rgb(255 246 229);
+}
+
+@media (max-width: 1024px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-shell {
+    width: min(1680px, 99vw);
+  }
+
+  .generate-btn {
+    width: 100%;
+  }
+
+  .calendar-wrap,
+  .quickshift-calendar,
+  .loading {
+    min-height: 74svh;
+    height: 74svh;
+  }
+
+  .quickshift-calendar .rbc-toolbar {
+    flex-direction: column;
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generate-btn {
+    transition: none;
+  }
+}
