@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,5 +60,13 @@ public class CsvReaderService {
         }
 
         return plannedDays;
+    }
+
+    public List<DayForecastDto> readDataFromCsvForMonth(String filePath, YearMonth targetMonth) {
+        List<DayForecastDto> allDays = readDataFromCsv(filePath);
+
+        return allDays.stream()
+                .filter(day -> YearMonth.from(day.getDate()).equals(targetMonth))
+                .toList();
     }
 }

@@ -4,17 +4,19 @@ import com.licenta.licentabackend.domain.Employee;
 import com.licenta.licentabackend.domain.Shift;
 import com.licenta.licentabackend.dto.DayForecastDto;
 import com.licenta.licentabackend.dto.EmployeeTracker;
+import com.licenta.licentabackend.dto.GenerateScheduleResponseDto;
 import com.licenta.licentabackend.exceptions.NoEmployeesException;
 import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,16 +27,55 @@ public class SchedulingService {
     private static final Logger log = LoggerFactory.getLogger(SchedulingService.class);
     private final EmployeeRepository employeeRepository;
     private final ShiftRepository shiftRepository;
+    private final CsvReaderService csvReaderService;
+    private final String forecastCsvPath;
     int BIG_SALES_THRESHOLD = 2000;
     int MASSIVE_SALES_THRESHOLD = 5000;
 
-    public SchedulingService(EmployeeRepository employeeRepository, ShiftRepository shiftRepository) {
+    public SchedulingService(EmployeeRepository employeeRepository,
+                             ShiftRepository shiftRepository,
+                             CsvReaderService csvReaderService,
+                             @Value("${app.forecast.csv-path:}") String forecastCsvPath) {
         this.employeeRepository = employeeRepository;
         this.shiftRepository = shiftRepository;
+        this.csvReaderService = csvReaderService;
+        this.forecastCsvPath = forecastCsvPath;
     }
 
     @Transactional
-    public void generateSchedule(List<DayForecastDto> forecastDays) {
+    public GenerateScheduleResponseDto generateScheduleForMonth(Integer year, Integer month) {
+        YearMonth targetMonth = resolveTargetMonth(year, month);
+
+        if (forecastCsvPath == null || forecastCsvPath.isBlank()) {
+            throw new IllegalArgumentException("CSV path is not configured. Please set app.forecast.csv-path in application.properties.");
+        }
+
+        List<DayForecastDto> forecastDays = csvReaderService.readDataFromCsvForMonth(forecastCsvPath, targetMonth);
+        if (forecastDays.isEmpty()) {
+            throw new IllegalArgumentException("No forecast rows found for " + targetMonth + " in configured CSV file.");
+        }
+
+        LocalDate monthStart = targetMonth.atDay(1);
+        LocalDate monthEnd = targetMonth.atEndOfMonth();
+        List<Shift> existingShifts = shiftRepository.findByShiftDateBetween(monthStart, monthEnd);
+
+        if (!existingShifts.isEmpty()) {
+            shiftRepository.deleteAll(existingShifts);
+        }
+
+        int generatedShifts = generateSchedule(forecastDays);
+
+        return new GenerateScheduleResponseDto(
+                targetMonth.getYear(),
+                targetMonth.getMonthValue(),
+                forecastDays.size(),
+                generatedShifts,
+                "Shifts generated successfully."
+        );
+    }
+
+    @Transactional
+    public int generateSchedule(List<DayForecastDto> forecastDays) {
         log.info("Initializing Heuristic CSP Solver...");
         List<Employee> allEmployees = employeeRepository.findAll();
         if (allEmployees.isEmpty()) {
@@ -143,6 +184,27 @@ public class SchedulingService {
         shiftRepository.saveAll(shiftsToSave);
 
         log.info("✅ Successfully generated and saved {} shifts in the database!", shiftsToSave.size());
+        return shiftsToSave.size();
+    }
+
+    private YearMonth resolveTargetMonth(Integer year, Integer month) {
+        if (year == null && month == null) {
+            return YearMonth.now().plusMonths(1);
+        }
+
+        if (year == null || month == null) {
+            throw new IllegalArgumentException("Both year and month must be provided together.");
+        }
+
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Month must be between 1 and 12.");
+        }
+
+        if (year < 2000 || year > 2100) {
+            throw new IllegalArgumentException("Year must be between 2000 and 2100.");
+        }
+
+        return YearMonth.of(year, month);
     }
 
     private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning, boolean requiresFullTime) {

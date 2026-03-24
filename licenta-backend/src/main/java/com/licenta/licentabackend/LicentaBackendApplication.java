@@ -2,9 +2,6 @@ package com.licenta.licentabackend;
 
 import com.licenta.licentabackend.domain.Employee;
 import com.licenta.licentabackend.repository.EmployeeRepository;
-import com.licenta.licentabackend.repository.ShiftRepository;
-import com.licenta.licentabackend.service.CsvReaderService;
-import com.licenta.licentabackend.service.SchedulingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,15 +21,9 @@ public class LicentaBackendApplication {
     }
 
     @Bean
-    CommandLineRunner runApplicationLogic(CsvReaderService csvReaderService,
-                                          SchedulingService schedulingService,
-                                          EmployeeRepository employeeRepository,
-                                          ShiftRepository shiftRepository) {
+    CommandLineRunner runApplicationLogic(EmployeeRepository employeeRepository) {
         return args -> {
             log.info("Starting application logic...");
-
-            shiftRepository.deleteAll(); //momentan pentru a tine db ul liber
-            //employeeRepository.deleteAll();
 
             if (employeeRepository.count() == 0) {
                 log.info("No employees found in DB. Seeding initial test data...");
@@ -72,14 +63,8 @@ public class LicentaBackendApplication {
                 employeeRepository.saveAll(employees);
                 log.info("5 mock employees successfully added to the database.");
             }
-            String filePath = "E:\\An3\\Licenta\\PrognozaDeVenit.csv";
-            var forecastDays = csvReaderService.readDataFromCsv(filePath);
 
-            log.info("Generating schedule based on read forecast...");
-
-            schedulingService.generateSchedule(forecastDays);
-
-            log.info("Successfully generated schedule");
+            log.info("Application ready. Use POST /api/shifts/generate to generate shifts for next month.");
         };
     }
 

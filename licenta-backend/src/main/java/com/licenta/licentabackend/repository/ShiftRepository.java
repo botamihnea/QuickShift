@@ -16,4 +16,6 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
 
     // Toate turele unui anumit angajat
     List<Shift> findByEmployeeId(Long employeeId);
+
+    List<Shift> findByShiftDateBetween(LocalDate startDate, LocalDate endDate);
 }
