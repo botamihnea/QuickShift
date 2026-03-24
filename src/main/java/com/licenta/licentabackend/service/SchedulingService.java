@@ -25,6 +25,8 @@ public class SchedulingService {
     private static final Logger log = LoggerFactory.getLogger(SchedulingService.class);
     private final EmployeeRepository employeeRepository;
     private final ShiftRepository shiftRepository;
+    int BIG_SALES_THRESHOLD = 2000;
+    int MASSIVE_SALES_THRESHOLD = 5000;
 
     public SchedulingService(EmployeeRepository employeeRepository, ShiftRepository shiftRepository) {
         this.employeeRepository = employeeRepository;
@@ -73,12 +75,12 @@ public class SchedulingService {
 
             int projectedSale = dayForecast.getSalesForecast();
 
-            if (projectedSale > 2000) {
+            if (projectedSale > BIG_SALES_THRESHOLD) {
                 targetEvening++; // ZI AGLOMERATA - ADAUGAM INCA UN OM
                 log.info("Big sales estimated ({}) for {}. Upped to {} people on the evening shift.",
                         projectedSale, dayForecast.getDate(), targetEvening);
             }
-            if (projectedSale > 5000) {
+            if (projectedSale > MASSIVE_SALES_THRESHOLD) {
                 targetMorning++; // ZI EXCEPTIONALA - 1 MARTIE, 8 MARTIE , ETC
                 log.info("!!! Massive sales forecast ({}) for {}. Upped to {} people on the morning shift.",
                         projectedSale, dayForecast.getDate(), targetMorning);
@@ -92,6 +94,14 @@ public class SchedulingService {
                     .filter(t -> t.getConsecutiveWorkedDays() < 5)
                     .filter(t -> !t.isHad12HourShiftYesterday())
                     .collect(Collectors.toList());
+            /*
+            "Inițial, am încercat să optimizez algoritmul Greedy pentru a grupa zilele libere ale angajaților (pentru work-life balance).
+             Totuși, testând sistemul (QA), am observat că, pe echipe mici de 5 persoane, această constrângere "soft" intră în conflict cu constrângerile "hard" (limita legală de 5 zile lucrate consecutiv pentru ceilalți angajați).
+              Astfel, am luat decizia arhitecturală de a prioritiza Acoperirea Magazinului (Coverage) și distribuția uniformă a orelor,
+              lăsând gruparea zilelor libere pentru o iterație viitoare care ar putea folosi Meta-Heuristici mai avansate."
+             */
+           // availableTrackers.sort(Comparator.comparing(EmployeeTracker::needsSecondDayOff) // first we try to have employees with 2 straight days off
+             //       .thenComparingInt(EmployeeTracker::getWorkedHoursCurrentMonth)); // then we sort them by the hour
 
             availableTrackers.sort(Comparator.comparingInt(EmployeeTracker::getWorkedHoursCurrentMonth));
 

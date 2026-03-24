@@ -13,6 +13,7 @@ public class EmployeeTracker {
 
     private boolean workedYesterday;
     private boolean had12HourShiftYesterday;
+    private int consecutiveDaysOff;
 
     public EmployeeTracker (Employee employee) {
         this.employee = employee;
@@ -21,6 +22,7 @@ public class EmployeeTracker {
         this.consecutiveWorkedDays = 0;
         this.workedYesterday = false;
         this.had12HourShiftYesterday = false;
+        this.consecutiveDaysOff  = 0;
     }
 
     public void assignShift(int hours) {
@@ -29,12 +31,14 @@ public class EmployeeTracker {
         this.consecutiveWorkedDays++;
         this.workedYesterday = true;
         this.had12HourShiftYesterday = (hours == 12);
+        this.consecutiveDaysOff = 0;
     }
 
     public void registerDayOff() {
         this.consecutiveWorkedDays = 0;
         this.workedYesterday = false;
         this.had12HourShiftYesterday = false;
+        this.consecutiveDaysOff++;
     }
 
     public void resetWeeklyHours() {
@@ -64,6 +68,14 @@ public class EmployeeTracker {
 
     public boolean isHad12HourShiftYesterday() {
         return had12HourShiftYesterday;
+    }
+
+    public int getConsecutiveDaysOff() {
+        return consecutiveDaysOff;
+    }
+
+    public boolean needsSecondDayOff() {
+        return this.consecutiveDaysOff == 1;
     }
 
 }
