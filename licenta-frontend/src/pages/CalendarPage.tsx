@@ -1,6 +1,7 @@
 import axios from 'axios'
 import moment from 'moment'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Calendar,
   momentLocalizer,
@@ -10,6 +11,7 @@ import {
 } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { generateNextMonthShifts, getAllShifts } from '../api/shiftService'
+import { useAuth } from '../auth/useAuth'
 import type { BackendShift, GenerateScheduleResponse, ShiftCalendarEvent } from '../types'
 import './CalendarPage.css'
 
@@ -113,6 +115,8 @@ function ShiftEventRenderer({ event }: ShiftEventRendererProps) {
 }
 
 function CalendarPage() {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -123,7 +127,7 @@ function CalendarPage() {
 
   const nextMonthLabel = useMemo(() => formatMonthYear(getNextMonthDate()), [])
 
-  const fetchShifts = async (): Promise<void> => {
+  const fetchShifts = useCallback(async (): Promise<void> => {
     setIsLoadingShifts(true)
 
     try {
@@ -131,6 +135,12 @@ function CalendarPage() {
       setShiftEvents(toCalendarEvents(shifts))
       setErrorMessage(null)
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
       if (axios.isAxiosError(error) && error.response?.status === 204) {
         setShiftEvents([])
         setErrorMessage(null)
@@ -142,11 +152,11 @@ function CalendarPage() {
     } finally {
       setIsLoadingShifts(false)
     }
-  }
+  }, [logout, navigate])
 
   useEffect(() => {
     void fetchShifts()
-  }, [])
+  }, [fetchShifts])
 
   const handleGenerateShifts = async (): Promise<void> => {
     setIsGenerating(true)
@@ -159,6 +169,12 @@ function CalendarPage() {
       setCalendarView(Views.MONTH)
       await fetchShifts()
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
       if (axios.isAxiosError(error) && typeof error.response?.data === 'string') {
         setErrorMessage(error.response.data)
       } else {
@@ -179,14 +195,26 @@ function CalendarPage() {
           <p className="brand">QuickShift</p>
           <h1>{nextMonthLabel} Shift Calendar</h1>
         </div>
-        <button
-          type="button"
-          className="generate-btn"
-          onClick={handleGenerateShifts}
-          disabled={isGenerating}
-        >
-          {isGenerating ? 'Generating...' : `Generate ${nextMonthLabel}`}
-        </button>
+        <div className="top-bar-actions">
+          <button
+            type="button"
+            className="generate-btn"
+            onClick={handleGenerateShifts}
+            disabled={isGenerating}
+          >
+            {isGenerating ? 'Generating...' : `Generate ${nextMonthLabel}`}
+          </button>
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={() => {
+              logout()
+              navigate('/login', { replace: true })
+            }}
+          >
+            Log out
+          </button>
+        </div>
       </section>
 
       <section className="calendar-panel">

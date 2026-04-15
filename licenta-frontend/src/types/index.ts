@@ -1,5 +1,14 @@
 import type { Event } from 'react-big-calendar'
 
+export type AuthRequest = {
+  email: string
+  password: string
+}
+
+export type AuthResponse = {
+  token: string
+}
+
 export type GenerateScheduleResponse = {
   targetYear: number
   targetMonth: number
