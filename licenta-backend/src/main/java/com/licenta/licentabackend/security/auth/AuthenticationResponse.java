@@ -1,4 +1,3 @@
 package com.licenta.licentabackend.security.auth;
 
-public record AuthenticationResponse() {
-}
+public record AuthenticationResponse(String token) {}
