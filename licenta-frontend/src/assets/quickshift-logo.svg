@@ -1,0 +1,28 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">QuickShift Logo</title>
+  <desc id="desc">Stylized professional holding a pocket watch to represent precise shift timing.</desc>
+  <defs>
+    <linearGradient id="coat" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f8f79" />
+      <stop offset="1" stop-color="#205f51" />
+    </linearGradient>
+    <linearGradient id="watch" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4c76b" />
+      <stop offset="1" stop-color="#d59a35" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="60" cy="60" r="56" fill="#fff8ef" stroke="#d7cabf" stroke-width="2" />
+  <path d="M43 92c2-16 10-24 17-24 8 0 15 8 17 24" fill="url(#coat)" />
+  <circle cx="60" cy="45" r="12" fill="#f0c6a7" />
+  <path d="M51 45c2-5 7-8 11-8 4 0 8 3 10 8" fill="#3b2a22" />
+  <path d="M60 59c-7 0-12 3-15 8" stroke="#2d6a5b" stroke-width="4" stroke-linecap="round" fill="none" />
+  <path d="M66 66c6 0 12 3 14 8" stroke="#2d6a5b" stroke-width="4" stroke-linecap="round" fill="none" />
+
+  <circle cx="82" cy="70" r="13" fill="url(#watch)" stroke="#9a6a1e" stroke-width="2" />
+  <circle cx="82" cy="70" r="2" fill="#8b5b15" />
+  <path d="M82 70V63M82 70l6 4" stroke="#8b5b15" stroke-width="2" stroke-linecap="round" />
+  <rect x="79" y="54" width="6" height="4" rx="2" fill="#c28b2e" />
+
+  <path d="M54 75l18-7" stroke="#f0c6a7" stroke-width="4" stroke-linecap="round" />
+</svg>

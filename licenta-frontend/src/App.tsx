@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './auth/useAuth'
 import CalendarPage from './pages/CalendarPage'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -11,21 +12,26 @@ function App() {
   return (
     <Routes>
       <Route
+        path="/"
+        element={isAuthenticated ? <Navigate to="/schedule" replace /> : <LandingPage />}
+      />
+
+      <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+        element={isAuthenticated ? <Navigate to="/schedule" replace /> : <LoginPage />}
       />
       <Route
         path="/register"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
+        element={isAuthenticated ? <Navigate to="/schedule" replace /> : <RegisterPage />}
       />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<CalendarPage />} />
+        <Route path="/schedule" element={<CalendarPage />} />
       </Route>
 
       <Route
         path="*"
-        element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />}
+        element={<Navigate to={isAuthenticated ? '/schedule' : '/'} replace />}
       />
     </Routes>
   )

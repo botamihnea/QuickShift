@@ -45,7 +45,7 @@ function LoginPage() {
     try {
       const response = await login({ email, password })
       setAuthToken(response.token)
-      navigate('/', { replace: true })
+      navigate('/schedule', { replace: true })
     } catch (error) {
       const message = resolveLoginError(error)
       setErrorMessage(message)
@@ -61,6 +61,9 @@ function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
+        <Link to="/" className="auth-back-link">
+          Back to home
+        </Link>
         <p className="auth-brand">QuickShift</p>
         <h1>Log in</h1>
         <p className="auth-subtitle">Access your shift planning dashboard.</p>

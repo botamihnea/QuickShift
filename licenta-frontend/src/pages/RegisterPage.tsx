@@ -29,7 +29,7 @@ function RegisterPage() {
     try {
       const response = await register({ email, password })
       setAuthToken(response.token)
-      navigate('/', { replace: true })
+      navigate('/schedule', { replace: true })
     } catch (error) {
       if (axios.isAxiosError(error) && typeof error.response?.data === 'string') {
         setErrorMessage(error.response.data)

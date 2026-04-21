@@ -24,6 +24,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme='dark'] {
+  --bg: #111921;
+  --surface: rgb(28 39 50 / 84%);
+  --surface-muted: #16222d;
+  --surface-border: rgb(168 206 216 / 16%);
+  --surface-border-strong: rgb(176 220 230 / 28%);
+  --ink-strong: #eef6fb;
+  --ink-muted: #c4d7e2;
+  --ink-subtle: #9fb7c5;
+  --brand: #ec7d57;
+  --brand-dark: #d16040;
+  --brand-ink: #f9b49c;
+  --soft-shadow: 0 16px 34px rgb(3 8 13 / 42%);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -41,4 +56,11 @@ body {
     radial-gradient(circle at 10% 20%, rgb(255 198 131 / 32%), transparent 35%),
     radial-gradient(circle at 90% 8%, rgb(118 219 199 / 22%), transparent 30%),
     linear-gradient(155deg, #fef9f3 0%, #f9efe3 42%, #f4ebe5 100%);
+}
+
+:root[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at 14% 16%, rgb(62 117 184 / 22%), transparent 35%),
+    radial-gradient(circle at 85% 6%, rgb(39 156 137 / 18%), transparent 30%),
+    linear-gradient(160deg, #0f161d 0%, #132230 44%, #182736 100%);
 }

@@ -114,6 +114,22 @@ function ShiftEventRenderer({ event }: ShiftEventRendererProps) {
   )
 }
 
+type AgendaEventRendererProps = {
+  event: ShiftCalendarEvent
+}
+
+function AgendaEventRenderer({ event }: AgendaEventRendererProps) {
+  return (
+    <div className="agenda-event">
+      <span className="agenda-name">{event.resource.employeeName}</span>
+      <span className="agenda-meta">
+        {event.resource.isPartTime ? 'PT ' : ''}
+        {event.resource.timeRange}
+      </span>
+    </div>
+  )
+}
+
 function CalendarPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
@@ -209,7 +225,7 @@ function CalendarPage() {
             className="logout-btn"
             onClick={() => {
               logout()
-              navigate('/login', { replace: true })
+              navigate('/', { replace: true })
             }}
           >
             Log out
@@ -242,6 +258,13 @@ function CalendarPage() {
             <Calendar<ShiftCalendarEvent>
               localizer={localizer}
               events={shiftEvents}
+              titleAccessor={(event) => {
+                if (calendarView === Views.AGENDA) {
+                  return `${event.resource.employeeName} | ${event.resource.isPartTime ? 'PT ' : ''}${event.resource.timeRange}`
+                }
+
+                return typeof event.title === 'string' ? event.title : ''
+              }}
               defaultView={Views.MONTH}
               date={calendarDate}
               view={calendarView}
@@ -255,6 +278,9 @@ function CalendarPage() {
               className="quickshift-calendar"
               components={{
                 event: ShiftEventRenderer,
+                agenda: {
+                  event: AgendaEventRenderer,
+                },
               }}
               eventPropGetter={(event: ShiftCalendarEvent) => {
                 if (event.resource.isPartTime) {
