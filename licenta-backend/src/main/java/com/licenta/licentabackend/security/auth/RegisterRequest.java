@@ -10,4 +10,6 @@ public record RegisterRequest(
         String email,
         @NotBlank(message = "Password is required!")
         @Size(min = 6, message = "Password must have at least 6 characters!")
-        String password) {}
+        String password,
+        @NotBlank(message = "Please select your assigned store!")
+        Long storeId) {}

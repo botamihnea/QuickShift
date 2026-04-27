@@ -51,8 +51,8 @@ public class SecurityConfig {
                 // 2. Set up the Route Rules
                 .authorizeHttpRequests(auth -> auth
                         // Allow anyone to access the Auth endpoints (Login / Register) without a token
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/**", "/api/stores").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")//Could be hasAuthority!
                         // Every single other route requires a valid JWT token
                         .anyRequest().authenticated()
                 )

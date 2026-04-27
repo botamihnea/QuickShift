@@ -25,12 +25,17 @@ public class AppUser implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     public AppUser() {}
 
-    public AppUser(String email, String password, Role role) {
+    public AppUser(String email, String password, Role role, Store store) {
         this.email = email;
         this.password = password;
         this.role = role;
+        this.store = store;
     }
 
     public Long getId() {
@@ -57,6 +62,14 @@ public class AppUser implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    public Store getStore() {
+        return this.store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 
     @Override
