@@ -2,8 +2,6 @@ package com.licenta.licentabackend.repository;
 
 import com.licenta.licentabackend.domain.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -19,6 +17,10 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
     // Toate turele unui anumit angajat
     List<Shift> findByEmployeeId(Long employeeId);
 
+    List<Shift> findByEmployeeStoreId(Long storeId);
+
     List<Shift> findByShiftDateBetween(LocalDate startDate, LocalDate endDate);
+
+    List<Shift> findByEmployeeStoreIdAndShiftDateBetween(Long storeId, LocalDate startDate, LocalDate endDate);
 
 }

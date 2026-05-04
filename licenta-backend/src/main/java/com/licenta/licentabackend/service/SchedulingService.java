@@ -44,6 +44,11 @@ public class SchedulingService {
 
     @Transactional
     public GenerateScheduleResponseDto generateScheduleForMonth(Integer year, Integer month) {
+        return generateScheduleForMonth(year, month, null);
+    }
+
+    @Transactional
+    public GenerateScheduleResponseDto generateScheduleForMonth(Integer year, Integer month, Long storeId) {
         YearMonth targetMonth = resolveTargetMonth(year, month);
 
         if (forecastCsvPath == null || forecastCsvPath.isBlank()) {
@@ -57,27 +62,46 @@ public class SchedulingService {
 
         LocalDate monthStart = targetMonth.atDay(1);
         LocalDate monthEnd = targetMonth.atEndOfMonth();
-        List<Shift> existingShifts = shiftRepository.findByShiftDateBetween(monthStart, monthEnd);
+        List<Employee> targetEmployees = storeId == null
+                ? employeeRepository.findAll()
+                : employeeRepository.findByStoreId(storeId);
+
+        if (targetEmployees.isEmpty()) {
+            if (storeId == null) {
+                throw new NoEmployeesException("No employees found in the database!");
+            }
+            throw new NoEmployeesException("No employees found for your store.");
+        }
+
+        List<Shift> existingShifts = storeId == null
+                ? shiftRepository.findByShiftDateBetween(monthStart, monthEnd)
+                : shiftRepository.findByEmployeeStoreIdAndShiftDateBetween(storeId, monthStart, monthEnd);
 
         if (!existingShifts.isEmpty()) {
             shiftRepository.deleteAll(existingShifts);
         }
 
-        int generatedShifts = generateSchedule(forecastDays);
+        int generatedShifts = generateSchedule(forecastDays, targetEmployees);
 
         return new GenerateScheduleResponseDto(
                 targetMonth.getYear(),
                 targetMonth.getMonthValue(),
                 forecastDays.size(),
                 generatedShifts,
-                "Shifts generated successfully."
+                storeId == null
+                        ? "Shifts generated successfully."
+                        : "Shifts generated successfully for your store."
         );
     }
 
     @Transactional
     public int generateSchedule(List<DayForecastDto> forecastDays) {
+        return generateSchedule(forecastDays, employeeRepository.findAll());
+    }
+
+    @Transactional
+    public int generateSchedule(List<DayForecastDto> forecastDays, List<Employee> allEmployees) {
         log.info("Initializing Heuristic CSP Solver...");
-        List<Employee> allEmployees = employeeRepository.findAll();
         if (allEmployees.isEmpty()) {
             throw new NoEmployeesException("No employees found in the database!");
         }

@@ -39,7 +39,7 @@ public class AuthenticationService {
         AppUser user = new AppUser(
                 request.email(),
                 passwordEncoder.encode(request.password()),
-                Role.MANAGER, //default for now,
+                Role.EMPLOYEE, //default for now,
                 store
         );
 
@@ -61,6 +61,21 @@ public class AuthenticationService {
 
         String jwtToken = jwtService.generateToken(user);
         return new AuthenticationResponse(jwtToken);
+    }
+
+    public AuthenticatedUserResponse getCurrentUser(String email) {
+        AppUser user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user was not found."));
+
+        Long storeId = user.getStore() != null ? user.getStore().getId() : null;
+        String storeName = user.getStore() != null ? user.getStore().getStoreName() : null;
+
+        return new AuthenticatedUserResponse(
+                user.getEmail(),
+                user.getRole().name(),
+                storeId,
+                storeName
+        );
     }
 
 }

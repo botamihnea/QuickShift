@@ -26,7 +26,11 @@ public class Employee {
     private Integer holidayRecoveryHours;
 
     @Column(name = "shift_preference")
-    private String shiftPreference; // Ex: "MORNING", "EVENING"
+    private String shiftPreference;
+
+    @ManyToOne
+    @JoinColumn(name = "store_id")
+    private Store store;// Ex: "MORNING", "EVENING"
 
     // --- Constructori ---
     public Employee() {
