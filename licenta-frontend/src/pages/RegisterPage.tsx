@@ -1,8 +1,10 @@
 import axios from 'axios'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../api/authService'
+import { getStores } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
+import type { StoreSummary } from '../types'
 import './AuthPage.css'
 
 function RegisterPage() {
@@ -12,8 +14,47 @@ function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [selectedStoreId, setSelectedStoreId] = useState('')
+  const [stores, setStores] = useState<StoreSummary[]>([])
+  const [isLoadingStores, setIsLoadingStores] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const loadStores = async () => {
+      setIsLoadingStores(true)
+
+      try {
+        const fetchedStores = await getStores()
+
+        if (isCancelled) {
+          return
+        }
+
+        setStores(fetchedStores)
+
+        if (fetchedStores.length === 1) {
+          setSelectedStoreId(String(fetchedStores[0].id))
+        }
+      } catch {
+        if (!isCancelled) {
+          setErrorMessage('Could not load stores. Please refresh and try again.')
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingStores(false)
+        }
+      }
+    }
+
+    void loadStores()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -24,10 +65,19 @@ function RegisterPage() {
       return
     }
 
+    if (!selectedStoreId) {
+      setErrorMessage('Please choose your store.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const response = await register({ email, password })
+      const response = await register({
+        email,
+        password,
+        storeId: Number(selectedStoreId),
+      })
       setAuthToken(response.token)
       navigate('/schedule', { replace: true })
     } catch (error) {
@@ -61,6 +111,29 @@ function RegisterPage() {
           </label>
 
           <label>
+            Store
+            <select
+              value={selectedStoreId}
+              onChange={(event) => setSelectedStoreId(event.target.value)}
+              required
+              disabled={isLoadingStores || stores.length === 0}
+            >
+              <option value="">
+                {isLoadingStores
+                  ? 'Loading stores...'
+                  : stores.length === 0
+                    ? 'No stores available'
+                    : 'Select your store'}
+              </option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.storeName}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
             Password
             <input
               type="password"
@@ -84,8 +157,12 @@ function RegisterPage() {
 
           {errorMessage ? <p className="auth-error">{errorMessage}</p> : null}
 
-          <button type="submit" className="auth-submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account...' : 'Register'}
+          <button
+            type="submit"
+            className="auth-submit"
+            disabled={isSubmitting || isLoadingStores || stores.length === 0}
+          >
+            {isLoadingStores ? 'Loading stores...' : isSubmitting ? 'Creating account...' : 'Register'}
           </button>
         </form>
 

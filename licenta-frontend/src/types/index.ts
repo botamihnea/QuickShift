@@ -5,8 +5,34 @@ export type AuthRequest = {
   password: string
 }
 
+export type RegisterRequest = {
+  email: string
+  password: string
+  storeId: number
+}
+
 export type AuthResponse = {
   token: string
+}
+
+export type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE'
+
+export type AuthenticatedUser = {
+  email: string
+  role: UserRole
+  storeId: number | null
+  storeName: string | null
+}
+
+export type StoreSummary = {
+  id: number
+  storeName: string
+}
+
+export type CreateStoreRequest = {
+  storeName: string
+  address: string
+  busyDaySalesThreshold: number
 }
 
 export type GenerateScheduleResponse = {

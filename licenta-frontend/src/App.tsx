@@ -5,6 +5,7 @@ import CalendarPage from './pages/CalendarPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import StoreManagementPage from './pages/StoreManagementPage'
 
 function App() {
   const { isAuthenticated } = useAuth()
@@ -27,6 +28,7 @@ function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/schedule" element={<CalendarPage />} />
+        <Route path="/admin/stores" element={<StoreManagementPage />} />
       </Route>
 
       <Route

@@ -74,9 +74,29 @@
   font: 500 0.95rem/1.2 var(--font-ui);
 }
 
+.auth-form select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  background: #fff;
+  padding: 0.7rem 0.75rem;
+  color: var(--ink-strong);
+  font: 500 0.95rem/1.2 var(--font-ui);
+}
+
 .auth-form input:focus-visible {
   outline: 3px solid rgb(42 124 105 / 32%);
   outline-offset: 1px;
+}
+
+.auth-form select:focus-visible {
+  outline: 3px solid rgb(42 124 105 / 32%);
+  outline-offset: 1px;
+}
+
+.auth-form select:disabled {
+  background: #f4f6f5;
+  color: var(--ink-subtle);
 }
 
 .auth-submit {

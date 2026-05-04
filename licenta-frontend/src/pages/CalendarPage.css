@@ -1,8 +1,8 @@
 .page-shell {
   min-height: 100svh;
-  width: min(1680px, 98vw);
-  margin: 0 auto;
-  padding: 1rem 0 1.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 1rem clamp(0.75rem, 1.2vw, 1.2rem) 1.5rem;
   display: grid;
   gap: 0.85rem;
 }
@@ -27,6 +27,21 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+}
+
+.admin-btn {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 14px;
+  padding: 0.8rem 0.95rem;
+  color: var(--ink-muted);
+  background: rgb(255 255 255 / 70%);
+  font: 700 0.88rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.admin-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
 }
 
 .brand {
@@ -262,7 +277,8 @@ h1 {
   }
 
   .page-shell {
-    width: min(1680px, 99vw);
+    width: 100%;
+    padding: 0.75rem 0.45rem 1.2rem;
   }
 
   .generate-btn {
@@ -276,6 +292,10 @@ h1 {
   }
 
   .logout-btn {
+    width: 100%;
+  }
+
+  .admin-btn {
     width: 100%;
   }
 

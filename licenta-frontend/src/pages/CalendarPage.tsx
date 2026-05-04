@@ -132,7 +132,7 @@ function AgendaEventRenderer({ event }: AgendaEventRendererProps) {
 
 function CalendarPage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { currentUser, isAdmin, logout } = useAuth()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -212,6 +212,15 @@ function CalendarPage() {
           <h1>{nextMonthLabel} Shift Calendar</h1>
         </div>
         <div className="top-bar-actions">
+          {isAdmin ? (
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={() => navigate('/admin/stores')}
+            >
+              Manage stores
+            </button>
+          ) : null}
           <button
             type="button"
             className="generate-btn"
@@ -235,6 +244,9 @@ function CalendarPage() {
 
       <section className="calendar-panel">
         <div className="calendar-meta">
+          {currentUser?.storeName ? (
+            <p className="meta">Store view: {currentUser.storeName}</p>
+          ) : null}
           <p className="meta">
             Main view for validation: generated shifts, employee names, and clear
             `PT` label for part-time entries.
