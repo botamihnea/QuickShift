@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createStore, getStores } from '../api/storeService'
+import { createStore, getStoreStaff, getStores } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
-import type { StoreSummary } from '../types'
+import type { StoreStaffResponse, StoreSummary } from '../types'
 import './StoreManagementPage.css'
 
 function resolveCreateStoreError(error: unknown): string {
@@ -64,6 +64,10 @@ function StoreManagementPage() {
   const [isLoadingStores, setIsLoadingStores] = useState(false)
   const [stores, setStores] = useState<StoreSummary[]>([])
   const [storesErrorMessage, setStoresErrorMessage] = useState<string | null>(null)
+  const [staffStoreId, setStaffStoreId] = useState<number | null>(null)
+  const [staffInfo, setStaffInfo] = useState<StoreStaffResponse | null>(null)
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false)
+  const [staffErrorMessage, setStaffErrorMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -89,6 +93,22 @@ function StoreManagementPage() {
 
     setIsStoresVisible(true)
     await loadStores()
+  }
+
+  const loadStoreStaff = async (storeId: number) => {
+    setIsLoadingStaff(true)
+    setStaffErrorMessage(null)
+    setStaffStoreId(storeId)
+
+    try {
+      const data = await getStoreStaff(storeId)
+      setStaffInfo(data)
+    } catch {
+      setStaffErrorMessage('Could not load staff for this store.')
+      setStaffInfo(null)
+    } finally {
+      setIsLoadingStaff(false)
+    }
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -288,10 +308,56 @@ function StoreManagementPage() {
                       <p className="store-list-order">#{String(index + 1).padStart(2, '0')}</p>
                       <p className="store-list-name">{store.storeName}</p>
                       <p className="store-list-id">Store ID: {store.id}</p>
+                      <button
+                        type="button"
+                        className="store-list-action"
+                        onClick={() => {
+                          void loadStoreStaff(store.id)
+                        }}
+                      >
+                        View staff
+                      </button>
                     </li>
                   ))}
                 </ul>
               )}
+            </aside>
+            <aside className="store-list-panel">
+              <div className="store-list-header">
+                <h2>Store staff</h2>
+              </div>
+              {staffStoreId === null ? (
+                <p className="store-list-empty">Select a store to view its manager and employees.</p>
+              ) : isLoadingStaff ? (
+                <p className="store-list-empty">Loading staff details...</p>
+              ) : staffErrorMessage ? (
+                <p className="store-admin-status error" role="alert">
+                  {staffErrorMessage}
+                </p>
+              ) : staffInfo ? (
+                <div className="staff-summary">
+                  <div className="staff-section">
+                    <p className="staff-label">Manager</p>
+                    <p className="staff-value">
+                      {staffInfo.manager ? staffInfo.manager.email : 'No manager assigned'}
+                    </p>
+                  </div>
+                  <div className="staff-section">
+                    <p className="staff-label">Employees</p>
+                    {staffInfo.employees.length === 0 ? (
+                      <p className="staff-value">No employees yet.</p>
+                    ) : (
+                      <ul className="staff-list">
+                        {staffInfo.employees.map((employee) => (
+                          <li key={employee.id}>
+                            {employee.fullName} · {employee.contractType.replace('_', ' ')} · {employee.shiftPreference}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </aside>
           </div>
         </form>

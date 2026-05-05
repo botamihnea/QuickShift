@@ -76,12 +76,26 @@ function LandingPage() {
           >
             {theme === 'light' ? 'Dark mode' : 'Light mode'}
           </button>
-          <Link className="cta-secondary" to="/login">
-            Log in
-          </Link>
-          <Link className="cta-primary" to="/register">
-            Start free
-          </Link>
+          <div className="header-cta-stack">
+            <div className="cta-row">
+              <span className="cta-label">Interested in QuickShift?</span>
+              <Link className="cta-primary" to="/demo">
+                Request a demo
+              </Link>
+            </div>
+            <div className="cta-row">
+              <span className="cta-label">Already an employee?</span>
+              <Link className="cta-secondary" to="/login">
+                Log in
+              </Link>
+            </div>
+            <div className="cta-row">
+              <span className="cta-label">Just employed?</span>
+              <Link className="cta-secondary" to="/register">
+                Register
+              </Link>
+            </div>
+          </div>
         </nav>
       </header>
 
@@ -254,11 +268,8 @@ function LandingPage() {
       <section className="closing-section">
         <h2>Ready to modernize your workforce planning?</h2>
         <div className="closing-actions">
-          <Link className="cta-primary" to="/login">
-            Log in
-          </Link>
-          <Link className="cta-secondary" to="/register">
-            Register
+          <Link className="cta-primary closing-demo" to="/demo">
+            Request a demo
           </Link>
         </div>
       </section>

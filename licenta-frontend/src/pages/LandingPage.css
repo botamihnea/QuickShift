@@ -52,9 +52,12 @@
 }
 
 .header-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 2.2fr;
   align-items: center;
-  gap: 0.65rem;
+  gap: 1rem;
+  min-width: 420px;
+  max-width: 640px;
 }
 
 .theme-toggle {
@@ -66,6 +69,7 @@
   font: 700 0.82rem/1 var(--font-ui);
   cursor: pointer;
   transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  justify-self: center;
 }
 
 .theme-toggle:hover {
@@ -108,6 +112,26 @@
   padding: 0.82rem 1.25rem;
   font: 700 0.92rem/1 var(--font-ui);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.header-cta-stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cta-label {
+  color: var(--ink-subtle);
+  font: 600 1.02rem/1.2 var(--font-ui);
+  letter-spacing: 0.02em;
+}
+
+.cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 0.2rem 0;
+  width: 100%;
 }
 
 .cta-primary {
@@ -410,8 +434,12 @@
   margin-top: 1rem;
   display: flex;
   justify-content: center;
-  gap: 0.7rem;
+  gap: 1rem;
   flex-wrap: wrap;
+}
+
+.closing-demo {
+  min-width: 200px;
 }
 
 @keyframes pulseCell {
@@ -433,8 +461,14 @@
   }
 
   .header-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    min-width: unset;
+    max-width: 100%;
+    justify-items: stretch;
+  }
+
+  .cta-row {
+    justify-content: space-between;
   }
 
   .hero-section {

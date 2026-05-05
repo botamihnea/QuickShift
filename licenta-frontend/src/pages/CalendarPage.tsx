@@ -11,8 +11,9 @@ import {
 } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { generateNextMonthShifts, getAllShifts } from '../api/shiftService'
+import { getNotifications, markNotificationRead } from '../api/notificationService'
 import { useAuth } from '../auth/useAuth'
-import type { BackendShift, GenerateScheduleResponse, ShiftCalendarEvent } from '../types'
+import type { BackendShift, GenerateScheduleResponse, NotificationItem, ShiftCalendarEvent } from '../types'
 import './CalendarPage.css'
 
 const localizer = momentLocalizer(moment)
@@ -135,6 +136,8 @@ function CalendarPage() {
   const { currentUser, isAdmin, logout } = useAuth()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [response, setResponse] = useState<GenerateScheduleResponse | null>(null)
   const [shiftEvents, setShiftEvents] = useState<ShiftCalendarEvent[]>([])
@@ -173,6 +176,24 @@ function CalendarPage() {
   useEffect(() => {
     void fetchShifts()
   }, [fetchShifts])
+
+  const loadNotifications = useCallback(async () => {
+    if (currentUser?.role !== 'MANAGER') {
+      return
+    }
+
+    setIsLoadingNotifications(true)
+    try {
+      const items = await getNotifications()
+      setNotifications(items)
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }, [currentUser?.role])
+
+  useEffect(() => {
+    void loadNotifications()
+  }, [loadNotifications])
 
   const handleGenerateShifts = async (): Promise<void> => {
     setIsGenerating(true)
@@ -221,6 +242,15 @@ function CalendarPage() {
               Manage stores
             </button>
           ) : null}
+          {currentUser?.role === 'MANAGER' ? (
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={() => navigate('/employees')}
+            >
+              Employees
+            </button>
+          ) : null}
           <button
             type="button"
             className="generate-btn"
@@ -246,6 +276,52 @@ function CalendarPage() {
         <div className="calendar-meta">
           {currentUser?.storeName ? (
             <p className="meta">Store view: {currentUser.storeName}</p>
+          ) : null}
+          {currentUser?.role === 'MANAGER' ? (
+            <div className="notification-panel">
+              <div className="notification-header">
+                <p className="notification-title">Notifications</p>
+                <button
+                  type="button"
+                  className="notification-refresh"
+                  onClick={() => {
+                    void loadNotifications()
+                  }}
+                  disabled={isLoadingNotifications}
+                >
+                  {isLoadingNotifications ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+              {notifications.length === 0 ? (
+                <p className="notification-empty">No notifications yet.</p>
+              ) : (
+                <ul className="notification-list">
+                  {notifications.map((item) => (
+                    <li key={item.id} className={item.read ? 'notification-item' : 'notification-item unread'}>
+                      <div>
+                        <p className="notification-message">{item.message}</p>
+                        <p className="notification-meta">
+                          {item.storeName ? `${item.storeName} · ` : ''}
+                          {new Date(item.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {!item.read ? (
+                        <button
+                          type="button"
+                          className="notification-mark"
+                          onClick={async () => {
+                            await markNotificationRead(item.id)
+                            void loadNotifications()
+                          }}
+                        >
+                          Mark read
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ) : null}
           <p className="meta">
             Main view for validation: generated shifts, employee names, and clear

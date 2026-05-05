@@ -45,7 +45,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       token,
       currentUser,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(currentUser),
       isAuthLoading,
       isAdmin: currentUser?.role === 'ADMIN',
       setAuthToken: (nextToken: string) => {

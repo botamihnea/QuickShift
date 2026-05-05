@@ -69,7 +69,7 @@
 
 .store-admin-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.9fr);
   gap: 0.95rem;
 }
 
@@ -198,6 +198,59 @@
   border-radius: 12px;
   padding: 0.56rem 0.62rem;
   background: linear-gradient(140deg, #fff, #fff8f0);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.store-list-action {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 10px;
+  padding: 0.4rem 0.6rem;
+  background: #fff;
+  color: var(--ink-muted);
+  font: 700 0.75rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.store-list-action:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.staff-summary {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.staff-section {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 0.6rem;
+  background: #fff;
+}
+
+.staff-label {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.staff-value {
+  margin: 0.3rem 0 0;
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+.staff-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  display: grid;
+  gap: 0.25rem;
 }
 
 .store-list-order,

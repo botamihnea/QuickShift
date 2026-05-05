@@ -11,9 +11,14 @@ function RegisterPage() {
   const navigate = useNavigate()
   const { setAuthToken } = useAuth()
 
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [shiftPreference, setShiftPreference] = useState<'MORNING' | 'EVENING' | 'ANY'>('ANY')
+  const [contractType, setContractType] = useState<'FULL_TIME_8H' | 'PART_TIME_6H' | 'PART_TIME_4H'>(
+    'FULL_TIME_8H',
+  )
   const [selectedStoreId, setSelectedStoreId] = useState('')
   const [stores, setStores] = useState<StoreSummary[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(true)
@@ -74,8 +79,11 @@ function RegisterPage() {
 
     try {
       const response = await register({
+        fullName,
         email,
         password,
+        shiftPreference,
+        contractType,
         storeId: Number(selectedStoreId),
       })
       setAuthToken(response.token)
@@ -94,11 +102,25 @@ function RegisterPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
+        <Link to="/" className="auth-back-link">
+          Back to home
+        </Link>
         <p className="auth-brand">QuickShift</p>
         <h1>Create account</h1>
         <p className="auth-subtitle">Register to start managing shift generation.</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          <label>
+            Full name
+            <input
+              type="text"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+              autoComplete="name"
+            />
+          </label>
+
           <label>
             Email
             <input
@@ -130,6 +152,34 @@ function RegisterPage() {
                   {store.storeName}
                 </option>
               ))}
+            </select>
+          </label>
+
+          <label>
+            Shift preference
+            <select
+              value={shiftPreference}
+              onChange={(event) => setShiftPreference(event.target.value as 'MORNING' | 'EVENING' | 'ANY')}
+              required
+            >
+              <option value="MORNING">Morning</option>
+              <option value="EVENING">Evening</option>
+              <option value="ANY">Any</option>
+            </select>
+          </label>
+
+          <label>
+            Contract type
+            <select
+              value={contractType}
+              onChange={(event) =>
+                setContractType(event.target.value as 'FULL_TIME_8H' | 'PART_TIME_6H' | 'PART_TIME_4H')
+              }
+              required
+            >
+              <option value="FULL_TIME_8H">Full time (8h)</option>
+              <option value="PART_TIME_6H">Part time (6h)</option>
+              <option value="PART_TIME_4H">Part time (4h)</option>
             </select>
           </label>
 
@@ -167,7 +217,7 @@ function RegisterPage() {
         </form>
 
         <p className="auth-footer">
-          Already registered? <Link to="/login">Log in</Link>
+          Already an employee? <Link to="/login">Log in</Link>
         </p>
       </section>
     </main>

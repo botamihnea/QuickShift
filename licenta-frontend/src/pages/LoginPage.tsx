@@ -99,7 +99,7 @@ function LoginPage() {
         </form>
 
         <p className="auth-footer">
-          No account yet? <Link to="/register">Create one</Link>
+          Just employed? <Link to="/register">Register</Link>
         </p>
       </section>
     </main>

@@ -1,0 +1,137 @@
+.employees-shell {
+  min-height: 100svh;
+  width: 100%;
+  margin: 0;
+  padding: 1rem clamp(0.75rem, 1.2vw, 1.2rem) 1.5rem;
+}
+
+.employees-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  padding: clamp(1rem, 0.9rem + 0.8vw, 1.6rem);
+}
+
+.employees-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.employees-brand {
+  margin: 0;
+  color: var(--brand-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font: 700 0.76rem/1 var(--font-ui);
+}
+
+.employees-header h1 {
+  margin: 0.45rem 0 0;
+  color: var(--ink-strong);
+  font: 700 clamp(1.45rem, 1.1rem + 1.2vw, 2rem) / 1.08 var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.employees-subtitle {
+  margin: 0.45rem 0 0;
+  color: var(--ink-subtle);
+}
+
+.employees-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.employees-secondary {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 14px;
+  padding: 0.72rem 0.9rem;
+  color: var(--ink-muted);
+  background: rgb(255 255 255 / 74%);
+  font: 700 0.86rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.employees-secondary:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.employees-status {
+  margin: 0.85rem 0 0;
+  border-radius: 10px;
+  padding: 0.48rem 0.7rem;
+  font-size: 0.86rem;
+}
+
+.employees-status.error {
+  color: #803426;
+  background: rgb(255 221 214);
+}
+
+.employees-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.employee-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgb(255 255 255 / 70%);
+}
+
+.employee-name {
+  margin: 0;
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+
+.employee-meta {
+  margin: 0.15rem 0 0;
+  color: var(--ink-subtle);
+  font-size: 0.85rem;
+}
+
+.employee-delete {
+  border: 0;
+  border-radius: 12px;
+  padding: 0.55rem 0.85rem;
+  background: rgb(221 95 73 / 12%);
+  color: var(--brand-dark);
+  font: 700 0.82rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.employee-delete:hover {
+  background: rgb(221 95 73 / 20%);
+}
+
+.employees-empty {
+  margin: 0;
+  color: var(--ink-subtle);
+}
+
+@media (max-width: 960px) {
+  .employees-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .employees-actions {
+    width: 100%;
+    display: grid;
+  }
+
+  .employee-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

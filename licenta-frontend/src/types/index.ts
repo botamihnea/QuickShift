@@ -6,8 +6,11 @@ export type AuthRequest = {
 }
 
 export type RegisterRequest = {
+  fullName: string
   email: string
   password: string
+  shiftPreference: 'MORNING' | 'EVENING' | 'ANY'
+  contractType: 'FULL_TIME_8H' | 'PART_TIME_6H' | 'PART_TIME_4H'
   storeId: number
 }
 
@@ -27,6 +30,34 @@ export type AuthenticatedUser = {
 export type StoreSummary = {
   id: number
   storeName: string
+}
+
+export type ManagerSummary = {
+  id: number
+  email: string
+}
+
+export type EmployeeSummary = {
+  id: number
+  fullName: string
+  contractType: 'FULL_TIME_8H' | 'PART_TIME_6H' | 'PART_TIME_4H'
+  shiftPreference: 'MORNING' | 'EVENING' | 'ANY'
+  remainingLeaveDays: number | null
+  holidayRecoveryHours: number | null
+}
+
+export type StoreStaffResponse = {
+  manager: ManagerSummary | null
+  employees: EmployeeSummary[]
+}
+
+export type NotificationItem = {
+  id: number
+  message: string
+  createdAt: string
+  read: boolean
+  storeId: number | null
+  storeName: string | null
 }
 
 export type CreateStoreRequest = {
