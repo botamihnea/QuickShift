@@ -16,9 +16,6 @@ public class Employee {
     @Column(name = "contract_type", nullable = false)
     private String contractType; // Ex: "FULL_TIME_8H", "PART_TIME_4H"
 
-    @Column(name = "role", nullable = false)
-    private String role; // Ex: "MANAGER", "FLORIST"
-
     @Column(name = "remaining_leave_days")
     private Integer remainingLeaveDays;
 
@@ -30,7 +27,11 @@ public class Employee {
 
     @ManyToOne
     @JoinColumn(name = "store_id")
-    private Store store;// Ex: "MORNING", "EVENING"
+    private Store store;
+
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private AppUser appUser;
 
     // --- Constructori ---
     public Employee() {
@@ -62,14 +63,6 @@ public class Employee {
         this.contractType = contractType; //FULL_TIME_8H, PART_TIME_4H, PART_TIME_6H
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
     public Integer getRemainingLeaveDays() {
         return remainingLeaveDays;
     }
@@ -92,5 +85,21 @@ public class Employee {
 
     public void setShiftPreference(String shiftPreference) {
         this.shiftPreference = shiftPreference;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
+    }
+
+    public AppUser getAppUser() {
+        return appUser;
+    }
+
+    public void setAppUser(AppUser appUser) {
+        this.appUser = appUser;
     }
 }

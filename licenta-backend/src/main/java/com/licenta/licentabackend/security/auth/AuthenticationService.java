@@ -1,8 +1,12 @@
 package com.licenta.licentabackend.security.auth;
 
 import com.licenta.licentabackend.domain.AppUser;
+import com.licenta.licentabackend.domain.Employee;
+import com.licenta.licentabackend.domain.Notification;
 import com.licenta.licentabackend.domain.Role;
 import com.licenta.licentabackend.domain.Store;
+import com.licenta.licentabackend.repository.EmployeeRepository;
+import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.StoreRepository;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.security.JwtService;
@@ -11,21 +15,35 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final EmployeeRepository employeeRepository;
+        private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager, StoreRepository storeRepository) {
+    public AuthenticationService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            StoreRepository storeRepository,
+                        EmployeeRepository employeeRepository,
+                        NotificationRepository notificationRepository
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.storeRepository = storeRepository;
+        this.employeeRepository = employeeRepository;
+                this.notificationRepository = notificationRepository;
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
@@ -44,6 +62,24 @@ public class AuthenticationService {
         );
 
         userRepository.save(user);
+
+        Employee employee = new Employee();
+        employee.setFullName(request.fullName());
+        employee.setContractType(request.contractType());
+        employee.setShiftPreference(request.shiftPreference());
+        employee.setRemainingLeaveDays(21);
+        employee.setHolidayRecoveryHours(0);
+        employee.setStore(store);
+        employee.setAppUser(user);
+        employeeRepository.save(employee);
+
+                List<AppUser> managers = userRepository.findByStoreIdAndRole(store.getId(), Role.MANAGER);
+                if (!managers.isEmpty()) {
+                        String message = "New employee registered: " + employee.getFullName();
+                        for (AppUser manager : managers) {
+                                notificationRepository.save(new Notification(message, manager, store));
+                        }
+                }
 
         String jwtToken = jwtService.generateToken(user);
         return new AuthenticationResponse(jwtToken);
