@@ -6,6 +6,7 @@ import com.licenta.licentabackend.dto.EmployeeSummaryDto;
 import com.licenta.licentabackend.dto.ManagerSummaryDto;
 import com.licenta.licentabackend.dto.StoreDto;
 import com.licenta.licentabackend.dto.StoreStaffResponse;
+import com.licenta.licentabackend.dto.UpdateBusyDayThresholdRequest;
 import com.licenta.licentabackend.domain.AppUser;
 import com.licenta.licentabackend.domain.Employee;
 import com.licenta.licentabackend.domain.Role;
@@ -52,7 +53,11 @@ public class AdminController {
 
         Store savedStore = storeRepository.save(newStore);
 
-        StoreDto responseDto = new StoreDto(savedStore.getId(), savedStore.getStoreName());
+        StoreDto responseDto = new StoreDto(
+            savedStore.getId(),
+            savedStore.getStoreName(),
+            savedStore.getBusyDaySalesThreshold()
+        );
 
         return ResponseEntity.ok(responseDto);
     }
@@ -76,6 +81,28 @@ public class AdminController {
                 .toList();
 
         return ResponseEntity.ok(new StoreStaffResponse(manager, employees));
+    }
+
+    @PutMapping("/stores/{storeId}/threshold")
+    public ResponseEntity<StoreDto> updateStoreThreshold(
+            @PathVariable Long storeId,
+            @RequestBody UpdateBusyDayThresholdRequest request
+    ) {
+        if (request == null || request.busyDaySalesThreshold() == null || request.busyDaySalesThreshold() <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new IllegalArgumentException("Store not found."));
+
+        store.setBusyDaySalesThreshold(request.busyDaySalesThreshold());
+        Store savedStore = storeRepository.save(store);
+
+        return ResponseEntity.ok(new StoreDto(
+                savedStore.getId(),
+                savedStore.getStoreName(),
+                savedStore.getBusyDaySalesThreshold()
+        ));
     }
 
 }

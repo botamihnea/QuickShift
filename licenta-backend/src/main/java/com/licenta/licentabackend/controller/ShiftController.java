@@ -2,12 +2,13 @@ package com.licenta.licentabackend.controller;
 
 import com.licenta.licentabackend.domain.AppUser;
 import com.licenta.licentabackend.domain.Role;
-import com.licenta.licentabackend.domain.Shift;
 import com.licenta.licentabackend.dto.GenerateScheduleRequestDto;
 import com.licenta.licentabackend.dto.GenerateScheduleResponseDto;
+import com.licenta.licentabackend.dto.ShiftDto;
 import com.licenta.licentabackend.exceptions.FailedReadingException;
 import com.licenta.licentabackend.exceptions.NoEmployeesException;
 import com.licenta.licentabackend.repository.ShiftRepository;
+import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.service.SchedulingService;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,30 +31,71 @@ public class ShiftController {
     private final ShiftRepository shiftRepository;
     private final SchedulingService schedulingService;
     private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
 
     public ShiftController(
             ShiftRepository shiftRepository,
             SchedulingService schedulingService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            EmployeeRepository employeeRepository
     ) {
         this.shiftRepository = shiftRepository;
         this.schedulingService = schedulingService;
         this.userRepository = userRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @GetMapping
-    public ResponseEntity<List<Shift>> getAllShifts(Authentication authentication) {
+    public ResponseEntity<List<ShiftDto>> getAllShifts(
+            Authentication authentication,
+            @RequestParam(required = false) Long storeId
+    ) {
         AppUser currentUser = resolveCurrentUser(authentication);
 
-        List<Shift> shifts = currentUser.getRole() == Role.ADMIN
-                ? shiftRepository.findAll()
-                : shiftRepository.findByEmployeeStoreId(resolveStoreId(currentUser));
+        List<com.licenta.licentabackend.domain.Shift> shifts;
+        if (currentUser.getRole() == Role.ADMIN) {
+            shifts = storeId == null
+                    ? shiftRepository.findAll()
+                    : shiftRepository.findByEmployeeStoreId(storeId);
+        } else {
+            shifts = shiftRepository.findByEmployeeStoreId(resolveStoreId(currentUser));
+        }
 
         if (shifts.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
 
-        return ResponseEntity.ok(shifts);
+        List<ShiftDto> result = shifts.stream()
+                .map(this::toDto)
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<ShiftDto>> getMyShifts(Authentication authentication) {
+        AppUser currentUser = resolveCurrentUser(authentication);
+        if (currentUser.getRole() != Role.EMPLOYEE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Long employeeId = employeeRepository.findByAppUserId(currentUser.getId())
+                .map(employee -> employee.getId())
+                .orElse(null);
+        if (employeeId == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        List<com.licenta.licentabackend.domain.Shift> shifts = shiftRepository.findByEmployeeId(employeeId);
+        if (shifts.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        List<ShiftDto> result = shifts.stream()
+                .map(this::toDto)
+                .toList();
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/generate")
@@ -62,9 +105,22 @@ public class ShiftController {
     ) {
         try {
             AppUser currentUser = resolveCurrentUser(authentication);
+            if (currentUser.getRole() == Role.EMPLOYEE) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only managers and admins can generate shifts.");
+            }
             Integer year = requestDto != null ? requestDto.year() : null;
             Integer month = requestDto != null ? requestDto.month() : null;
-            Long targetStoreId = currentUser.getRole() == Role.ADMIN ? null : resolveStoreId(currentUser);
+            Long targetStoreId;
+
+            if (currentUser.getRole() == Role.ADMIN) {
+                Long requestedStoreId = requestDto != null ? requestDto.storeId() : null;
+                if (requestedStoreId == null) {
+                    return ResponseEntity.badRequest().body("Store is required for admin schedule generation.");
+                }
+                targetStoreId = requestedStoreId;
+            } else {
+                targetStoreId = resolveStoreId(currentUser);
+            }
 
             GenerateScheduleResponseDto response = schedulingService.generateScheduleForMonth(
                     year,
@@ -95,6 +151,18 @@ public class ShiftController {
         }
 
         return currentUser.getStore().getId();
+    }
+
+    private ShiftDto toDto(com.licenta.licentabackend.domain.Shift shift) {
+        return new ShiftDto(
+                shift.getId(),
+                shift.getShiftDate(),
+                shift.getShiftType(),
+                new ShiftDto.EmployeeSummary(
+                        shift.getEmployee().getId(),
+                        shift.getEmployee().getFullName()
+                )
+        );
     }
 
 }

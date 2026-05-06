@@ -1,5 +1,6 @@
 package com.licenta.licentabackend.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class Store {
     private Double busyDaySalesThreshold;
 
     @OneToMany(mappedBy = "store", fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<AppUser> users;
 
     public Store() {}

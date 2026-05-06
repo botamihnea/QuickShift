@@ -1,4 +1,4 @@
 package com.licenta.licentabackend.dto;
 
-public record GenerateScheduleRequestDto(Integer year, Integer month) {
+public record GenerateScheduleRequestDto(Integer year, Integer month, Long storeId) {
 }

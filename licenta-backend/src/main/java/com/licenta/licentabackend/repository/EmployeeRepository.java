@@ -14,4 +14,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     // findById(Lodng id) -> face SELECT * FROM angajati WHERE id = ?
     // deleteById(Long id) -> face DELETE FROM angajati WHERE id = ?
     List<Employee> findByStoreId(Long storeId);
+
+    java.util.Optional<Employee> findByAppUserId(Long appUserId);
 }
