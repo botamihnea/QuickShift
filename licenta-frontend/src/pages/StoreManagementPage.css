@@ -202,6 +202,26 @@
   gap: 0.35rem;
 }
 
+.store-list-threshold {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.store-list-threshold label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--ink-muted);
+  font: 600 0.8rem/1 var(--font-ui);
+}
+
+.store-list-threshold input {
+  border-radius: 10px;
+  border: 1px solid var(--surface-border-strong);
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  font: 600 0.84rem/1 var(--font-ui);
+}
+
 .store-list-action {
   border: 1px solid var(--surface-border-strong);
   border-radius: 10px;

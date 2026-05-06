@@ -1,0 +1,136 @@
+.my-shifts-shell {
+  min-height: 100svh;
+  width: 100%;
+  margin: 0;
+  padding: 1rem clamp(0.75rem, 1.2vw, 1.2rem) 1.5rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.my-shifts-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  padding: clamp(1rem, 0.92rem + 0.8vw, 1.6rem);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.my-shifts-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+}
+
+.my-shifts-brand {
+  margin: 0;
+  color: var(--brand-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font: 700 0.76rem/1 var(--font-ui);
+}
+
+.my-shifts-header h1 {
+  margin: 0.35rem 0 0;
+  color: var(--ink-strong);
+  font: 700 clamp(1.4rem, 1.1rem + 1.5vw, 2.1rem) / 1.08 var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.my-shifts-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--ink-subtle);
+  font-size: 0.9rem;
+}
+
+.my-shifts-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.my-shifts-secondary {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 14px;
+  padding: 0.8rem 0.95rem;
+  color: var(--ink-muted);
+  background: rgb(255 255 255 / 70%);
+  font: 700 0.88rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.my-shifts-secondary:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.my-shifts-status {
+  margin: 0;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font: 600 0.8rem/1 var(--font-ui);
+}
+
+.my-shifts-status.error {
+  color: #803426;
+  background: rgb(255 221 214);
+}
+
+.my-shifts-table {
+  border-radius: 18px;
+  border: 1px solid var(--surface-border);
+  background: #fff;
+  overflow: hidden;
+  min-height: 60svh;
+}
+
+.my-shifts-empty {
+  margin: 0;
+  height: 60svh;
+  display: grid;
+  place-items: center;
+  color: var(--ink-subtle);
+}
+
+.my-shifts-grid {
+  display: grid;
+  max-height: 60svh;
+  overflow-y: auto;
+}
+
+.my-shifts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--surface-border);
+  color: #111;
+  font-size: 0.95rem;
+}
+
+.my-shifts-row.header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .my-shifts-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .my-shifts-actions {
+    width: 100%;
+  }
+
+  .my-shifts-secondary {
+    width: 100%;
+  }
+}

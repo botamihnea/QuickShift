@@ -15,3 +15,15 @@ export async function getStoreStaff(storeId: number): Promise<StoreStaffResponse
   const { data } = await httpClient.get<StoreStaffResponse>(`/api/admin/stores/${storeId}/staff`)
   return data
 }
+
+export async function updateStoreThreshold(storeId: number, busyDaySalesThreshold: number): Promise<StoreSummary> {
+  const { data } = await httpClient.put<StoreSummary>(`/api/admin/stores/${storeId}/threshold`, {
+    busyDaySalesThreshold,
+  })
+  return data
+}
+
+export async function updateMyStoreThreshold(busyDaySalesThreshold: number): Promise<StoreSummary> {
+  const { data } = await httpClient.put<StoreSummary>('/api/stores/threshold', { busyDaySalesThreshold })
+  return data
+}

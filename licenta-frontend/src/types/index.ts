@@ -30,6 +30,7 @@ export type AuthenticatedUser = {
 export type StoreSummary = {
   id: number
   storeName: string
+  busyDaySalesThreshold: number | null
 }
 
 export type ManagerSummary = {
@@ -76,7 +77,7 @@ export type GenerateScheduleResponse = {
 
 export type BackendShift = {
   id: number
-  shiftDate: string
+  shiftDate: string | [number, number, number] | { year: number; month: number; day: number }
   shiftType: string
   employee: {
     id: number

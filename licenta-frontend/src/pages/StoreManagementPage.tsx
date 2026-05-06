@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createStore, getStoreStaff, getStores } from '../api/storeService'
+import { createStore, getStoreStaff, getStores, updateStoreThreshold } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
 import type { StoreStaffResponse, StoreSummary } from '../types'
 import './StoreManagementPage.css'
@@ -64,6 +64,8 @@ function StoreManagementPage() {
   const [isLoadingStores, setIsLoadingStores] = useState(false)
   const [stores, setStores] = useState<StoreSummary[]>([])
   const [storesErrorMessage, setStoresErrorMessage] = useState<string | null>(null)
+  const [storesSuccessMessage, setStoresSuccessMessage] = useState<string | null>(null)
+  const [thresholdEdits, setThresholdEdits] = useState<Record<number, string>>({})
   const [staffStoreId, setStaffStoreId] = useState<number | null>(null)
   const [staffInfo, setStaffInfo] = useState<StoreStaffResponse | null>(null)
   const [isLoadingStaff, setIsLoadingStaff] = useState(false)
@@ -74,10 +76,20 @@ function StoreManagementPage() {
   const loadStores = async () => {
     setIsLoadingStores(true)
     setStoresErrorMessage(null)
+    setStoresSuccessMessage(null)
 
     try {
       const allStores = await getStores()
       setStores(allStores)
+      setThresholdEdits((prev) => {
+        const next = { ...prev }
+        allStores.forEach((store) => {
+          if (next[store.id] === undefined) {
+            next[store.id] = store.busyDaySalesThreshold?.toString() ?? ''
+          }
+        })
+        return next
+      })
     } catch (error) {
       setStoresErrorMessage(resolveLoadStoresError(error))
     } finally {
@@ -299,6 +311,10 @@ function StoreManagementPage() {
                 <p className="store-admin-status error" role="alert">
                   {storesErrorMessage}
                 </p>
+              ) : storesSuccessMessage ? (
+                <p className="store-admin-status success" role="status">
+                  {storesSuccessMessage}
+                </p>
               ) : stores.length === 0 ? (
                 <p className="store-list-empty">No stores found yet.</p>
               ) : (
@@ -308,6 +324,44 @@ function StoreManagementPage() {
                       <p className="store-list-order">#{String(index + 1).padStart(2, '0')}</p>
                       <p className="store-list-name">{store.storeName}</p>
                       <p className="store-list-id">Store ID: {store.id}</p>
+                      <div className="store-list-threshold">
+                        <label>
+                          Busy day threshold
+                          <input
+                            type="number"
+                            min={50}
+                            step={50}
+                            value={thresholdEdits[store.id] ?? ''}
+                            onChange={(event) => {
+                              const value = event.target.value
+                              setThresholdEdits((prev) => ({ ...prev, [store.id]: value }))
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="store-list-action"
+                          onClick={async () => {
+                            const parsed = Number(thresholdEdits[store.id])
+                            if (!Number.isFinite(parsed) || parsed <= 0) {
+                              setStoresErrorMessage('Threshold must be a positive number.')
+                              setStoresSuccessMessage(null)
+                              return
+                            }
+
+                            try {
+                              await updateStoreThreshold(store.id, parsed)
+                              setStoresErrorMessage(null)
+                              setStoresSuccessMessage('Threshold updated successfully.')
+                            } catch {
+                              setStoresErrorMessage('Could not update threshold for this store.')
+                              setStoresSuccessMessage(null)
+                            }
+                          }}
+                        >
+                          Update threshold
+                        </button>
+                      </div>
                       <button
                         type="button"
                         className="store-list-action"

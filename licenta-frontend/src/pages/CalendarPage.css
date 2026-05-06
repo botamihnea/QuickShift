@@ -27,6 +27,7 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 .admin-btn {
@@ -59,6 +60,27 @@ h1 {
   letter-spacing: -0.03em;
 }
 
+.store-filter {
+  margin-top: 0.65rem;
+}
+
+.store-filter label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--ink-subtle);
+  font: 600 0.78rem/1 var(--font-ui);
+}
+
+.store-filter select {
+  min-width: 220px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  color: var(--ink-strong);
+  font: 600 0.9rem/1 var(--font-ui);
+}
+
 .generate-btn {
   border: 0;
   border-radius: 16px;
@@ -70,6 +92,72 @@ h1 {
   cursor: pointer;
   transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
   box-shadow: 0 10px 22px rgb(214 88 66 / 30%);
+}
+
+.generate-specific {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.generate-specific select {
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  padding: 0.55rem 0.7rem;
+  background: #fff;
+  font: 600 0.85rem/1 var(--font-ui);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(16 26 36 / 55%);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal-card {
+  width: min(420px, 92vw);
+  border-radius: 20px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  padding: 1.2rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.modal-card h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font: 700 1.2rem/1.1 var(--font-display);
+}
+
+.modal-card p {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 0.9rem;
+}
+
+.modal-card input {
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  padding: 0.65rem 0.75rem;
+  font: 600 0.9rem/1 var(--font-ui);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.modal-status {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 0.82rem;
 }
 
 .generate-btn:hover:not(:disabled) {
@@ -205,6 +293,49 @@ h1 {
   cursor: pointer;
 }
 
+.threshold-panel {
+  flex: 1 1 100%;
+  border: 1px solid var(--surface-border);
+  border-radius: 18px;
+  padding: 0.75rem 0.85rem;
+  background: rgb(255 255 255 / 70%);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.threshold-title {
+  margin: 0;
+  color: var(--ink-strong);
+  font: 700 0.9rem/1 var(--font-ui);
+}
+
+.threshold-subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--ink-subtle);
+  font-size: 0.82rem;
+}
+
+.threshold-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.threshold-actions input {
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  padding: 0.55rem 0.7rem;
+  min-width: 160px;
+  font: 600 0.88rem/1 var(--font-ui);
+}
+
+.threshold-status {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 0.82rem;
+}
+
 .meta {
   margin: 0;
   color: var(--ink-subtle);
@@ -286,6 +417,15 @@ h1 {
 .quickshift-calendar .rbc-month-view .rbc-event {
   padding: 0.2rem 0.35rem;
   font-size: 0.7rem;
+}
+
+.quickshift-calendar .rbc-month-view .rbc-row-content {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.quickshift-calendar .rbc-month-view .rbc-month-row {
+  min-height: 130px;
 }
 
 .quickshift-calendar .rbc-time-view .rbc-event,

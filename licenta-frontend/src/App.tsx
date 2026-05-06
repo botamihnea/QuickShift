@@ -5,6 +5,8 @@ import CalendarPage from './pages/CalendarPage'
 import EmployeesPage from './pages/EmployeesPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import MyShiftsPage from './pages/MyShiftsPage'
+import NotificationsPage from './pages/NotificationsPage'
 import RegisterPage from './pages/RegisterPage'
 import RequestDemoPage from './pages/RequestDemoPage'
 import StoreManagementPage from './pages/StoreManagementPage'
@@ -36,6 +38,8 @@ function App() {
         <Route path="/schedule" element={<CalendarPage />} />
         <Route path="/admin/stores" element={<StoreManagementPage />} />
         <Route path="/employees" element={<EmployeesPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/my-shifts" element={<MyShiftsPage />} />
       </Route>
 
       <Route
