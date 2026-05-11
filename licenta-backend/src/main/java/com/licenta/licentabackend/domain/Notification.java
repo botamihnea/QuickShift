@@ -29,6 +29,10 @@ public class Notification {
     @JoinColumn(name = "store_id")
     private Store store;
 
+    // Non-null only for absence-report notifications sent to the manager
+    @Column(name = "related_absence_request_id")
+    private Long relatedAbsenceRequestId;
+
     public Notification() {}
 
     public Notification(String message, AppUser recipient, Store store) {
@@ -37,6 +41,11 @@ public class Notification {
         this.store = store;
         this.createdAt = LocalDateTime.now();
         this.isRead = false;
+    }
+
+    public Notification(String message, AppUser recipient, Store store, Long relatedAbsenceRequestId) {
+        this(message, recipient, store);
+        this.relatedAbsenceRequestId = relatedAbsenceRequestId;
     }
 
     public Long getId() {
@@ -77,5 +86,13 @@ public class Notification {
 
     public void setStore(Store store) {
         this.store = store;
+    }
+
+    public Long getRelatedAbsenceRequestId() {
+        return relatedAbsenceRequestId;
+    }
+
+    public void setRelatedAbsenceRequestId(Long relatedAbsenceRequestId) {
+        this.relatedAbsenceRequestId = relatedAbsenceRequestId;
     }
 }

@@ -158,6 +158,7 @@ public class ShiftController {
                 shift.getId(),
                 shift.getShiftDate(),
                 shift.getShiftType(),
+                shift.getStatus(),
                 new ShiftDto.EmployeeSummary(
                         shift.getEmployee().getId(),
                         shift.getEmployee().getFullName()

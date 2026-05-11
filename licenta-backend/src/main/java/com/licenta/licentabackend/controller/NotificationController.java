@@ -72,7 +72,8 @@ public class NotificationController {
                 notification.getCreatedAt(),
                 notification.isRead(),
                 storeId,
-                storeName
+                storeName,
+                notification.getRelatedAbsenceRequestId()
         );
     }
 }

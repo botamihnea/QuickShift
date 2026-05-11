@@ -2,6 +2,7 @@ package com.licenta.licentabackend.domain;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "shifts")
@@ -16,6 +17,11 @@ public class Shift {
 
     @Column(name = "shift_type", nullable = false)
     private String shiftType; // Ex: "SHIFT_1_10_18", "PART_TIME_16_20", "PART_TIME_16_22"
+
+    // "SCHEDULED" (normal) | "ABSENT" (employee called out) | "REPLACEMENT" (cover shift)
+    @Column(name = "status", nullable = false)
+    @ColumnDefault("'SCHEDULED'")
+    private String status = "SCHEDULED";
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
@@ -57,5 +63,13 @@ public class Shift {
 
     public void setEmployee(Employee employee) {
         this.employee = employee;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

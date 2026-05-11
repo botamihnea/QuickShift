@@ -8,5 +8,6 @@ public record NotificationDto(
         LocalDateTime createdAt,
         boolean read,
         Long storeId,
-        String storeName
+        String storeName,
+        Long relatedAbsenceRequestId  // null for regular notifications, non-null for absence alerts
 ) {}
