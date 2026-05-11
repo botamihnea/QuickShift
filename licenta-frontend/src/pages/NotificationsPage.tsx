@@ -2,16 +2,21 @@ import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, markNotificationRead } from '../api/notificationService'
+import { acknowledgeAbsence } from '../api/shiftService'
 import { useAuth } from '../auth/useAuth'
-import type { NotificationItem } from '../types'
+import type { AcknowledgeAbsenceResponse, NotificationItem } from '../types'
 import './NotificationsPage.css'
 
 function NotificationsPage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { currentUser, logout } = useAuth()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // Track per-notification acknowledge result
+  const [acknowledgeResults, setAcknowledgeResults] = useState<
+    Record<number, { pending: boolean; result: AcknowledgeAbsenceResponse | null; error: string | null }>
+  >({})
 
   const loadNotifications = async () => {
     setIsLoading(true)
@@ -35,6 +40,86 @@ function NotificationsPage() {
   useEffect(() => {
     void loadNotifications()
   }, [])
+
+  const handleAcknowledge = async (notificationId: number, absenceRequestId: number) => {
+    setAcknowledgeResults((prev) => ({
+      ...prev,
+      [notificationId]: { pending: true, result: null, error: null },
+    }))
+
+    try {
+      const result = await acknowledgeAbsence(absenceRequestId)
+      setAcknowledgeResults((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result, error: null },
+      }))
+      // Mark the notification as read and refresh so the main schedule reflects the change
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : 'Could not process the request. Please try again.'
+      setAcknowledgeResults((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result: null, error: msg },
+      }))
+    }
+  }
+
+  function renderActionArea(item: NotificationItem) {
+    const ackState = acknowledgeResults[item.id]
+    const isManager = currentUser?.role === 'MANAGER'
+    // Show acknowledge button regardless of read-status — manager may have
+    // clicked "Mark read" by mistake before the feature was in place
+    const isActionable = item.relatedAbsenceRequestId != null && isManager
+
+    // Show acknowledge result feedback
+    if (ackState?.result) {
+      return ackState.result.replacementFound ? (
+        <span className="ack-result success">
+          ✅ {ackState.result.replacementEmployeeName} assigned
+        </span>
+      ) : (
+        <span className="ack-result warning">⚠️ No replacement found</span>
+      )
+    }
+
+    if (ackState?.error) {
+      return <span className="ack-result error">{ackState.error}</span>
+    }
+
+    if (isActionable) {
+      return (
+        <button
+          type="button"
+          className="notification-acknowledge"
+          disabled={ackState?.pending}
+          onClick={() => handleAcknowledge(item.id, item.relatedAbsenceRequestId!)}
+        >
+          {ackState?.pending ? 'Processing...' : 'Acknowledge & Replace'}
+        </button>
+      )
+    }
+
+    if (!item.read) {
+      return (
+        <button
+          type="button"
+          className="notification-mark"
+          onClick={async () => {
+            await markNotificationRead(item.id)
+            void loadNotifications()
+          }}
+        >
+          Mark read
+        </button>
+      )
+    }
+
+    return <span className="notification-read">Read</span>
+  }
 
   return (
     <main className="notifications-shell">
@@ -86,20 +171,7 @@ function NotificationsPage() {
                     {new Date(item.createdAt).toLocaleString()}
                   </p>
                 </div>
-                {!item.read ? (
-                  <button
-                    type="button"
-                    className="notification-mark"
-                    onClick={async () => {
-                      await markNotificationRead(item.id)
-                      void loadNotifications()
-                    }}
-                  >
-                    Mark read
-                  </button>
-                ) : (
-                  <span className="notification-read">Read</span>
-                )}
+                {renderActionArea(item)}
               </article>
             ))
           )}

@@ -59,6 +59,7 @@ export type NotificationItem = {
   read: boolean
   storeId: number | null
   storeName: string | null
+  relatedAbsenceRequestId: number | null
 }
 
 export type CreateStoreRequest = {
@@ -79,6 +80,7 @@ export type BackendShift = {
   id: number
   shiftDate: string | [number, number, number] | { year: number; month: number; day: number }
   shiftType: string
+  status: 'SCHEDULED' | 'ABSENT' | 'REPLACEMENT'
   employee: {
     id: number
     fullName: string
@@ -92,5 +94,15 @@ export type ShiftCalendarEvent = Event & {
     employeeName: string
     compactEmployeeName: string
     timeRange: string
+    status: 'SCHEDULED' | 'ABSENT' | 'REPLACEMENT'
   }
+}
+
+export type AbsenceReportRequest = {
+  reason?: string
+}
+
+export type AcknowledgeAbsenceResponse = {
+  replacementFound: boolean
+  replacementEmployeeName: string | null
 }

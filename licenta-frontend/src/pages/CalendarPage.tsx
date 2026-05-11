@@ -10,11 +10,11 @@ import {
   Views,
 } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { generateNextMonthShifts, generateScheduleForMonth, getAllShifts } from '../api/shiftService'
+import { generateNextMonthShifts, generateScheduleForMonth, getAllShifts, acknowledgeAbsence } from '../api/shiftService'
 import { getNotifications, markNotificationRead } from '../api/notificationService'
 import { getStores, updateMyStoreThreshold } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
-import type { BackendShift, GenerateScheduleResponse, NotificationItem, ShiftCalendarEvent, StoreSummary } from '../types'
+import type { AcknowledgeAbsenceResponse, BackendShift, GenerateScheduleResponse, NotificationItem, ShiftCalendarEvent, StoreSummary } from '../types'
 import './CalendarPage.css'
 
 const localizer = momentLocalizer(moment)
@@ -107,8 +107,16 @@ function toCalendarEvents(shifts: BackendShift[]): ShiftCalendarEvent[] {
       const end = new Date(baseDate)
       end.setHours(endHour, 0, 0, 0)
 
+      const status = shift.status ?? 'SCHEDULED'
+      const isReplacement = status === 'REPLACEMENT'
+      const employeeLabel = status === 'ABSENT'
+        ? `[ABSENT] ${shift.employee.fullName}`
+        : isReplacement
+          ? `[+] ${shift.employee.fullName}`
+          : shift.employee.fullName
+
       return {
-        title: buildMonthLabel(shift.shiftType, shift.employee.fullName),
+        title: buildMonthLabel(shift.shiftType, employeeLabel),
         start,
         end,
         allDay: false,
@@ -116,8 +124,10 @@ function toCalendarEvents(shifts: BackendShift[]): ShiftCalendarEvent[] {
           isPartTime: shift.shiftType.startsWith('PART_TIME'),
           rawShiftType: shift.shiftType,
           employeeName: shift.employee.fullName,
-          compactEmployeeName: toCompactEmployeeName(shift.employee.fullName),
+          // Always show full name — no compact initials anywhere on the calendar
+          compactEmployeeName: employeeLabel,
           timeRange: formatHourInterval(shift.shiftType),
+          status,
         },
       }
     })
@@ -165,6 +175,10 @@ function CalendarPage() {
   const [stores, setStores] = useState<StoreSummary[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null)
+  // Per-notification acknowledge state for the inline CalendarPage panel
+  const [calendarAckState, setCalendarAckState] = useState<
+    Record<number, { pending: boolean; result: AcknowledgeAbsenceResponse | null; error: string | null }>
+  >({})
   const [thresholdInput, setThresholdInput] = useState('')
   const [thresholdStatus, setThresholdStatus] = useState<string | null>(null)
   const [isThresholdOpen, setIsThresholdOpen] = useState(false)
@@ -227,7 +241,7 @@ function CalendarPage() {
   }, [fetchShifts])
 
   const loadNotifications = useCallback(async () => {
-    if (!isManager) {
+    if (!currentUser) {
       return
     }
 
@@ -238,7 +252,7 @@ function CalendarPage() {
     } finally {
       setIsLoadingNotifications(false)
     }
-  }, [isManager])
+  }, [currentUser])
 
   useEffect(() => {
     void loadNotifications()
@@ -409,13 +423,22 @@ function CalendarPage() {
             </button>
           ) : null}
           {currentUser?.role === 'EMPLOYEE' ? (
-            <button
-              type="button"
-              className="admin-btn"
-              onClick={() => navigate('/my-shifts')}
-            >
-              View your shifts
-            </button>
+            <>
+              <button
+                type="button"
+                className="admin-btn"
+                onClick={() => navigate('/my-shifts')}
+              >
+                Manage my shifts
+              </button>
+              <button
+                type="button"
+                className="admin-btn"
+                onClick={() => navigate('/notifications')}
+              >
+                Notifications
+              </button>
+            </>
           ) : null}
           {isManager ? (
             <button
@@ -488,7 +511,7 @@ function CalendarPage() {
           {currentUser?.storeName ? (
             <p className="meta">Store view: {currentUser.storeName}</p>
           ) : null}
-          {isManager ? (
+          {currentUser != null ? (
             <div className="notification-panel">
               <div className="notification-header">
                 <p className="notification-title">New notifications</p>
@@ -507,29 +530,81 @@ function CalendarPage() {
                 <p className="notification-empty">No notifications yet.</p>
               ) : (
                 <ul className="notification-list">
-                  {unreadNotifications.map((item) => (
-                    <li key={item.id} className={item.read ? 'notification-item' : 'notification-item unread'}>
-                      <div>
-                        <p className="notification-message">{item.message}</p>
-                        <p className="notification-meta">
-                          {item.storeName ? `${item.storeName} · ` : ''}
-                          {new Date(item.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                      {!item.read ? (
-                        <button
-                          type="button"
-                          className="notification-mark"
-                          onClick={async () => {
-                            await markNotificationRead(item.id)
-                            void loadNotifications()
-                          }}
-                        >
-                          Mark read
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
+                  {unreadNotifications.map((item) => {
+                    const ackState = calendarAckState[item.id]
+                    const isAbsenceNotification = item.relatedAbsenceRequestId != null
+
+                    const handleAck = async () => {
+                      if (!item.relatedAbsenceRequestId) return
+                      setCalendarAckState((prev) => ({
+                        ...prev,
+                        [item.id]: { pending: true, result: null, error: null },
+                      }))
+                      try {
+                        const result = await acknowledgeAbsence(item.relatedAbsenceRequestId)
+                        setCalendarAckState((prev) => ({
+                          ...prev,
+                          [item.id]: { pending: false, result, error: null },
+                        }))
+                        // Mark as read and refresh calendar + notifications
+                        await markNotificationRead(item.id)
+                        void loadNotifications()
+                        void fetchShifts()
+                      } catch (err) {
+                        const msg =
+                          axios.isAxiosError(err) && typeof err.response?.data === 'string'
+                            ? err.response.data
+                            : 'Could not process. Please try again.'
+                        setCalendarAckState((prev) => ({
+                          ...prev,
+                          [item.id]: { pending: false, result: null, error: msg },
+                        }))
+                      }
+                    }
+
+                    return (
+                      <li key={item.id} className={item.read ? 'notification-item' : 'notification-item unread'}>
+                        <div>
+                          <p className="notification-message">{item.message}</p>
+                          <p className="notification-meta">
+                            {item.storeName ? `${item.storeName} · ` : ''}
+                            {new Date(item.createdAt).toLocaleString()}
+                          </p>
+                          {ackState?.result ? (
+                            <p className="notification-ack-result">
+                              {ackState.result.replacementFound
+                                ? `Replacement assigned: ${ackState.result.replacementEmployeeName}`
+                                : 'No replacement found — manual action required.'}
+                            </p>
+                          ) : null}
+                          {ackState?.error ? (
+                            <p className="notification-ack-result error">{ackState.error}</p>
+                          ) : null}
+                        </div>
+                        {isAbsenceNotification && !ackState?.result ? (
+                          <button
+                            type="button"
+                            className="notification-acknowledge"
+                            disabled={ackState?.pending}
+                            onClick={handleAck}
+                          >
+                            {ackState?.pending ? 'Processing...' : 'Acknowledge & Replace'}
+                          </button>
+                        ) : !isAbsenceNotification && !item.read ? (
+                          <button
+                            type="button"
+                            className="notification-mark"
+                            onClick={async () => {
+                              await markNotificationRead(item.id)
+                              void loadNotifications()
+                            }}
+                          >
+                            Mark read
+                          </button>
+                        ) : null}
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </div>
@@ -587,15 +662,16 @@ function CalendarPage() {
                 },
               }}
               eventPropGetter={(event: ShiftCalendarEvent) => {
+                if (event.resource.status === 'ABSENT') {
+                  return { className: 'event-absent' }
+                }
+                if (event.resource.status === 'REPLACEMENT') {
+                  return { className: 'event-replacement' }
+                }
                 if (event.resource.isPartTime) {
-                  return {
-                    className: 'event-part-time',
-                  }
+                  return { className: 'event-part-time' }
                 }
-
-                return {
-                  className: 'event-full-time',
-                }
+                return { className: 'event-full-time' }
               }}
             />
           )}

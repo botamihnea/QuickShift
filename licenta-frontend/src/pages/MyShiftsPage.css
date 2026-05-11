@@ -102,12 +102,13 @@
 
 .my-shifts-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr 1.2fr;
   gap: 0.5rem;
   padding: 0.7rem 0.9rem;
   border-bottom: 1px solid var(--surface-border);
   color: #111;
   font-size: 0.95rem;
+  align-items: center;
 }
 
 .my-shifts-row.header {
@@ -118,6 +119,139 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.75rem;
+}
+
+/* --- Status badges --- */
+.shift-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font: 600 0.74rem/1 var(--font-ui);
+}
+
+.shift-badge.scheduled {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.shift-badge.absent {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.shift-badge.replacement {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+/* --- Report absence button --- */
+.report-absence-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  background: #ffebe8;
+  color: #c62828;
+  font: 700 0.8rem/1 var(--font-ui);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.report-absence-btn:hover {
+  background: #ffc6bc;
+}
+
+.shift-reported {
+  color: #888;
+  font-size: 0.82rem;
+}
+
+/* --- Modal --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  display: grid;
+  place-items: center;
+  z-index: 999;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 22px;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 25%);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.modal-card h2 {
+  margin: 0;
+  font: 700 1.3rem/1.1 var(--font-display);
+  color: var(--ink-strong);
+}
+
+.modal-shift-info {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.modal-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-subtle);
+}
+
+.modal-label {
+  font: 600 0.85rem/1 var(--font-ui);
+  color: var(--ink-muted);
+}
+
+.modal-optional {
+  font-weight: 400;
+  color: var(--ink-subtle);
+}
+
+.modal-textarea {
+  width: 100%;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.92rem;
+  font-family: var(--font-ui);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.modal-textarea:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.modal-result {
+  margin: 0;
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+  font: 600 0.84rem/1.4 var(--font-ui);
+}
+
+.modal-result.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.modal-result.error {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
 }
 
 @media (max-width: 1024px) {
@@ -133,4 +267,9 @@
   .my-shifts-secondary {
     width: 100%;
   }
+
+  .my-shifts-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
+
