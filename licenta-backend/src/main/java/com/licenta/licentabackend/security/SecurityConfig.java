@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.context.annotation.Bean;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -43,25 +42,31 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         // 1. Disable CSRF (Cross-Site Request Forgery)
-        // Why? Because we use JWTs and a stateless architecture, CSRF is inherently mitigated.
+        // Why? Because we use JWTs and a stateless architecture, CSRF is inherently
+        // mitigated.
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 // 2. Set up the Route Rules
                 .authorizeHttpRequests(auth -> auth
                         // Allow anyone to access the Auth endpoints (Login / Register) without a token
-                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/stores").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")//Could be hasAuthority!
+                    .requestMatchers(
+                        "/api/auth/login",
+                        "/api/auth/register",
+                        "/api/auth/forgot-password",
+                        "/api/auth/reset-password",
+                        "/api/stores"
+                    ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")// Could be hasAuthority!
                         // Every single other route requires a valid JWT token
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
 
                 // 3. Set Session Management to STATELESS
-                // Why? Because Spring shouldn't remember the user in RAM. The JWT token is all we need.
+                // Why? Because Spring shouldn't remember the user in RAM. The JWT token is all
+                // we need.
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // 4. Wire up our custom ApplicationConfig and Filter
                 .authenticationProvider(authenticationProvider)

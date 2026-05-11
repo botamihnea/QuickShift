@@ -29,7 +29,8 @@ public class AppUser implements UserDetails {
     @JoinColumn(name = "store_id")
     private Store store;
 
-    public AppUser() {}
+    public AppUser() {
+    }
 
     public AppUser(String email, String password, Role role, Store store) {
         this.email = email;
@@ -41,13 +42,14 @@ public class AppUser implements UserDetails {
     public Long getId() {
         return this.id;
     }
+
     public String getEmail() {
         return this.email;
     }
+
     public Role getRole() {
         return this.role;
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -57,6 +59,10 @@ public class AppUser implements UserDetails {
     @Override
     public String getPassword() {
         return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     @Override
@@ -73,16 +79,23 @@ public class AppUser implements UserDetails {
     }
 
     @Override
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
     @Override
-    public boolean isCredentialsNonExpired() { return true; }
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
     @Override
-    public boolean isEnabled() { return true; }
-
-
-
-
+    public boolean isEnabled() {
+        return true;
+    }
 
 }
