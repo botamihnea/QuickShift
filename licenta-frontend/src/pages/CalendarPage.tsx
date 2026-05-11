@@ -495,6 +495,13 @@ function CalendarPage() {
           ) : null}
           <button
             type="button"
+            className="admin-btn"
+            onClick={() => navigate('/change-password')}
+          >
+            Change password
+          </button>
+          <button
+            type="button"
             className="logout-btn"
             onClick={() => {
               logout()

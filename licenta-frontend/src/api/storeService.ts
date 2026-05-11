@@ -1,5 +1,5 @@
 import httpClient from './httpClient'
-import type { CreateStoreRequest, StoreStaffResponse, StoreSummary } from '../types'
+import type { CreateManagerRequest, CreateStoreRequest, StoreStaffResponse, StoreSummary } from '../types'
 
 export async function getStores(): Promise<StoreSummary[]> {
   const { data } = await httpClient.get<StoreSummary[] | undefined>('/api/stores')
@@ -26,4 +26,13 @@ export async function updateStoreThreshold(storeId: number, busyDaySalesThreshol
 export async function updateMyStoreThreshold(busyDaySalesThreshold: number): Promise<StoreSummary> {
   const { data } = await httpClient.put<StoreSummary>('/api/stores/threshold', { busyDaySalesThreshold })
   return data
+}
+
+export async function getUnmanagedStores(): Promise<StoreSummary[]> {
+  const { data } = await httpClient.get<StoreSummary[] | undefined>('/api/admin/stores/unmanaged')
+  return Array.isArray(data) ? data : []
+}
+
+export async function createManager(request: CreateManagerRequest): Promise<void> {
+  await httpClient.post('/api/admin/managers', request)
 }

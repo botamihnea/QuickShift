@@ -68,6 +68,25 @@ export type CreateStoreRequest = {
   busyDaySalesThreshold: number
 }
 
+export type CreateManagerRequest = {
+  email: string
+  storeId: number
+}
+
+export type ForgotPasswordRequest = {
+  email: string
+}
+
+export type ResetPasswordRequest = {
+  token: string
+  newPassword: string
+}
+
+export type ChangePasswordRequest = {
+  currentPassword: string
+  newPassword: string
+}
+
 export type GenerateScheduleResponse = {
   targetYear: number
   targetMonth: number

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login } from '../api/authService'
 import { useAuth } from '../auth/useAuth'
 import './AuthPage.css'
@@ -30,6 +30,7 @@ function resolveLoginError(error: unknown): string {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { setAuthToken } = useAuth()
 
   const [email, setEmail] = useState('')
@@ -57,6 +58,10 @@ function LoginPage() {
       setIsSubmitting(false)
     }
   }
+
+  const passwordResetSuccess = Boolean(
+    (location.state as { passwordResetSuccess?: boolean } | null)?.passwordResetSuccess,
+  )
 
   return (
     <main className="auth-shell">
@@ -91,7 +96,18 @@ function LoginPage() {
             />
           </label>
 
+          {passwordResetSuccess ? (
+            <p className="auth-success" role="status">
+              Your password has been reset. Please log in with the new password.
+            </p>
+          ) : null}
           {errorMessage ? <p className="auth-error">{errorMessage}</p> : null}
+
+          <p className="auth-helper">
+            <Link to="/forgot-password" className="auth-link-inline">
+              Forgot password?
+            </Link>
+          </p>
 
           <button type="submit" className="auth-submit" disabled={isSubmitting}>
             {isSubmitting ? 'Logging in...' : 'Log in'}

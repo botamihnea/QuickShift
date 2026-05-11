@@ -124,6 +124,30 @@
   font-size: 0.84rem;
 }
 
+.auth-success {
+  margin: 0;
+  border-radius: 10px;
+  background: rgb(211 247 236);
+  color: #125645;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.84rem;
+}
+
+.auth-helper {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.auth-link-inline {
+  color: var(--brand-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-link-inline:hover {
+  text-decoration: underline;
+}
+
 .auth-footer {
   margin: 0.95rem 0 0;
   color: var(--ink-subtle);

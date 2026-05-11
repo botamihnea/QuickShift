@@ -73,6 +73,11 @@
   gap: 0.95rem;
 }
 
+.store-admin-column {
+  display: grid;
+  gap: 0.95rem;
+}
+
 .store-admin-panel,
 .store-list-panel {
   border: 1px solid var(--surface-border);
@@ -105,9 +110,35 @@
   font: 500 0.95rem/1.2 var(--font-ui);
 }
 
+.store-admin-form select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-strong);
+  background: #fff;
+  padding: 0.72rem 0.76rem;
+  color: var(--ink-strong);
+  font: 500 0.95rem/1.2 var(--font-ui);
+}
+
 .store-admin-form input:focus-visible {
   outline: 3px solid rgb(42 124 105 / 30%);
   outline-offset: 1px;
+}
+
+.store-admin-form select:focus-visible {
+  outline: 3px solid rgb(42 124 105 / 30%);
+  outline-offset: 1px;
+}
+
+.store-admin-inner-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.store-admin-actions-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .store-admin-hint {

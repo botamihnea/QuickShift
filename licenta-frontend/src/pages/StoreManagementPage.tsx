@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createStore, getStoreStaff, getStores, updateStoreThreshold } from '../api/storeService'
+import { createManager, createStore, getStoreStaff, getStores, getUnmanagedStores, updateStoreThreshold } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
 import type { StoreStaffResponse, StoreSummary } from '../types'
 import './StoreManagementPage.css'
@@ -52,6 +52,33 @@ function resolveLoadStoresError(error: unknown): string {
   return 'Could not load stores right now. Please try again.'
 }
 
+function resolveCreateManagerError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      return 'Cannot reach backend right now. Please verify server/CORS setup and try again.'
+    }
+
+    if (error.response.status === 401) {
+      return 'Your session expired. Please log in again.'
+    }
+
+    if (error.response.status === 403) {
+      return 'Only administrators are allowed to create managers.'
+    }
+
+    if (typeof error.response.data === 'string' && error.response.data.trim().length > 0) {
+      return error.response.data
+    }
+
+    const responseData = error.response.data as { message?: string } | undefined
+    if (responseData?.message) {
+      return responseData.message
+    }
+  }
+
+  return 'Could not create manager. Please check your inputs and try again.'
+}
+
 function StoreManagementPage() {
   const navigate = useNavigate()
   const { isAdmin, isAuthLoading, logout } = useAuth()
@@ -70,6 +97,13 @@ function StoreManagementPage() {
   const [staffInfo, setStaffInfo] = useState<StoreStaffResponse | null>(null)
   const [isLoadingStaff, setIsLoadingStaff] = useState(false)
   const [staffErrorMessage, setStaffErrorMessage] = useState<string | null>(null)
+  const [unmanagedStores, setUnmanagedStores] = useState<StoreSummary[]>([])
+  const [selectedUnmanagedStoreId, setSelectedUnmanagedStoreId] = useState<number | null>(null)
+  const [managerEmail, setManagerEmail] = useState('')
+  const [isLoadingUnmanaged, setIsLoadingUnmanaged] = useState(false)
+  const [managerErrorMessage, setManagerErrorMessage] = useState<string | null>(null)
+  const [managerSuccessMessage, setManagerSuccessMessage] = useState<string | null>(null)
+  const [isCreatingManager, setIsCreatingManager] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -123,6 +157,29 @@ function StoreManagementPage() {
     }
   }
 
+  const loadUnmanagedStores = async () => {
+    setIsLoadingUnmanaged(true)
+    setManagerErrorMessage(null)
+
+    try {
+      const items = await getUnmanagedStores()
+      setUnmanagedStores(items)
+      if (items.length > 0) {
+        setSelectedUnmanagedStoreId(items[0].id)
+      } else {
+        setSelectedUnmanagedStoreId(null)
+      }
+    } catch (error) {
+      setManagerErrorMessage(resolveLoadStoresError(error))
+    } finally {
+      setIsLoadingUnmanaged(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadUnmanagedStores()
+  }, [])
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorMessage(null)
@@ -161,6 +218,41 @@ function StoreManagementPage() {
       }
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleCreateManager = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setManagerErrorMessage(null)
+    setManagerSuccessMessage(null)
+
+    if (!selectedUnmanagedStoreId) {
+      setManagerErrorMessage('Please select a store that needs a manager.')
+      return
+    }
+
+    if (!managerEmail.trim()) {
+      setManagerErrorMessage('Manager email is required.')
+      return
+    }
+
+    setIsCreatingManager(true)
+
+    try {
+      await createManager({ email: managerEmail.trim(), storeId: selectedUnmanagedStoreId })
+      setManagerSuccessMessage('Manager account created successfully.')
+      setManagerEmail('')
+      await loadUnmanagedStores()
+    } catch (error) {
+      const message = resolveCreateManagerError(error)
+      setManagerErrorMessage(message)
+
+      if (message === 'Your session expired. Please log in again.') {
+        logout()
+        navigate('/login', { replace: true })
+      }
+    } finally {
+      setIsCreatingManager(false)
     }
   }
 
@@ -225,10 +317,11 @@ function StoreManagementPage() {
           </div>
         </div>
 
-        <form className="store-admin-form" onSubmit={handleSubmit}>
+        <div className="store-admin-form">
           <div className="store-admin-layout">
-            <section className="store-admin-panel">
-              <h2>Create a new store</h2>
+            <div className="store-admin-column">
+              <form className="store-admin-panel" onSubmit={handleSubmit}>
+                <h2>Create a new store</h2>
 
               <label>
                 Store name
@@ -279,10 +372,84 @@ function StoreManagementPage() {
                 </p>
               ) : null}
 
-              <button type="submit" className="store-admin-submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating store...' : 'Create store'}
-              </button>
-            </section>
+                <button type="submit" className="store-admin-submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating store...' : 'Create store'}
+                </button>
+              </form>
+
+              <section className="store-admin-panel">
+                <h2>Add manager</h2>
+
+                <form className="store-admin-inner-form" onSubmit={handleCreateManager}>
+                  <label>
+                    Unmanaged store
+                    <select
+                      value={selectedUnmanagedStoreId ?? ''}
+                      onChange={(event) => {
+                        const value = Number(event.target.value)
+                        setSelectedUnmanagedStoreId(Number.isNaN(value) ? null : value)
+                      }}
+                      disabled={isLoadingUnmanaged}
+                      required
+                    >
+                      {unmanagedStores.length === 0 ? (
+                        <option value="">No unmanaged stores</option>
+                      ) : (
+                        unmanagedStores.map((store) => (
+                          <option key={store.id} value={store.id}>
+                            {store.storeName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Manager email
+                    <input
+                      type="email"
+                      value={managerEmail}
+                      onChange={(event) => setManagerEmail(event.target.value)}
+                      required
+                      autoComplete="email"
+                      placeholder="manager@store.com"
+                    />
+                  </label>
+
+                  {managerErrorMessage ? (
+                    <p className="store-admin-status error" role="alert">
+                      {managerErrorMessage}
+                    </p>
+                  ) : null}
+
+                  {managerSuccessMessage ? (
+                    <p className="store-admin-status success" role="status">
+                      {managerSuccessMessage}
+                    </p>
+                  ) : null}
+
+                  <div className="store-admin-actions-row">
+                    <button
+                      type="button"
+                      className="store-admin-secondary"
+                      onClick={() => {
+                        void loadUnmanagedStores()
+                      }}
+                      disabled={isLoadingUnmanaged}
+                    >
+                      {isLoadingUnmanaged ? 'Refreshing...' : 'Refresh list'}
+                    </button>
+                    <button
+                      type="submit"
+                      className="store-admin-submit"
+                      disabled={isCreatingManager || unmanagedStores.length === 0}
+                    >
+                      {isCreatingManager ? 'Creating manager...' : 'Create manager'}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
 
             <aside className="store-list-panel" aria-live="polite">
               <div className="store-list-header">
@@ -414,7 +581,7 @@ function StoreManagementPage() {
               ) : null}
             </aside>
           </div>
-        </form>
+        </div>
       </section>
     </main>
   )
