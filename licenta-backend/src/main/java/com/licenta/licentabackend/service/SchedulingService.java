@@ -2,12 +2,14 @@ package com.licenta.licentabackend.service;
 
 import com.licenta.licentabackend.domain.Employee;
 import com.licenta.licentabackend.domain.Shift;
+import com.licenta.licentabackend.domain.Store;
 import com.licenta.licentabackend.dto.DayForecastDto;
 import com.licenta.licentabackend.dto.EmployeeTracker;
 import com.licenta.licentabackend.dto.GenerateScheduleResponseDto;
 import com.licenta.licentabackend.exceptions.NoEmployeesException;
 import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
+import com.licenta.licentabackend.repository.StoreRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,7 @@ public class SchedulingService {
     private static final Logger log = LoggerFactory.getLogger(SchedulingService.class);
     private final EmployeeRepository employeeRepository;
     private final ShiftRepository shiftRepository;
+    private final StoreRepository storeRepository;
     private final CsvReaderService csvReaderService;
     private final String forecastCsvPath;
     int BIG_SALES_THRESHOLD = 2000;
@@ -34,10 +37,12 @@ public class SchedulingService {
 
     public SchedulingService(EmployeeRepository employeeRepository,
                              ShiftRepository shiftRepository,
+                             StoreRepository storeRepository,
                              CsvReaderService csvReaderService,
                              @Value("${app.forecast.csv-path:}") String forecastCsvPath) {
         this.employeeRepository = employeeRepository;
         this.shiftRepository = shiftRepository;
+        this.storeRepository = storeRepository;
         this.csvReaderService = csvReaderService;
         this.forecastCsvPath = forecastCsvPath;
     }
@@ -52,12 +57,24 @@ public class SchedulingService {
         YearMonth targetMonth = resolveTargetMonth(year, month);
 
         if (forecastCsvPath == null || forecastCsvPath.isBlank()) {
-            throw new IllegalArgumentException("CSV path is not configured. Please set app.forecast.csv-path in application.properties.");
+            throw new IllegalArgumentException("Forecast file path is not configured. Please set app.forecast.csv-path in application.properties.");
         }
 
-        List<DayForecastDto> forecastDays = csvReaderService.readDataFromCsvForMonth(forecastCsvPath, targetMonth);
+        String sheetName = null;
+        if (storeId != null) {
+            Store store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + storeId));
+            sheetName = store.getStoreName();
+        }
+
+        List<DayForecastDto> forecastDays = csvReaderService.readDataFromCsvForMonth(
+                forecastCsvPath,
+                targetMonth,
+                sheetName
+        );
         if (forecastDays.isEmpty()) {
-            throw new IllegalArgumentException("No forecast rows found for " + targetMonth + " in configured CSV file.");
+            String source = sheetName == null ? "configured file" : "sheet " + sheetName;
+            throw new IllegalArgumentException("No forecast rows found for " + targetMonth + " in " + source + ".");
         }
 
         LocalDate monthStart = targetMonth.atDay(1);
@@ -303,7 +320,7 @@ public class SchedulingService {
         String contract = tracker.getEmployee().getContractType();
         if (contract != null) {
             if (contract.equals("FULL_TIME_8H")) {
-                return futureHours <= 48;
+                return futureHours <= 40;
             }
             if (contract.equals("PART_TIME_6H")) {
                 return futureHours <= 30;
