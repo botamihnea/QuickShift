@@ -19,8 +19,8 @@ import './CalendarPage.css'
 
 const localizer = momentLocalizer(moment)
 
-function formatMonthYear(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+function formatMonthYear(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     month: 'long',
     year: 'numeric',
   }).format(date)
@@ -187,8 +187,104 @@ function CalendarPage() {
   const [shiftEvents, setShiftEvents] = useState<ShiftCalendarEvent[]>([])
   const [calendarDate, setCalendarDate] = useState<Date>(getNextMonthDate())
   const [calendarView, setCalendarView] = useState<View>(Views.MONTH)
+  const [language, setLanguage] = useState<'en' | 'ro'>('en')
 
-  const nextMonthLabel = useMemo(() => formatMonthYear(getNextMonthDate()), [])
+  const isRomanian = language === 'ro'
+  const locale = isRomanian ? 'ro-RO' : 'en-US'
+  const uiText = useMemo(
+    () =>
+      isRomanian
+        ? {
+            shiftCalendarTitle: 'Calendar ture',
+            storeView: 'Vizualizare magazin',
+            noStores: 'Nu exista magazine',
+            manageStores: 'Gestionare magazine',
+            employees: 'Angajati',
+            manageMyShifts: 'Gestionare ture',
+            notifications: 'Notificari',
+            updateThreshold: 'Actualizeaza prag',
+            generating: 'Se genereaza...',
+            generateNextMonth: 'Genereaza',
+            generateForMonth: 'Genereaza pentru luna',
+            changePassword: 'Schimba parola',
+            logOut: 'Deconectare',
+            newNotifications: 'Notificari noi',
+            refreshing: 'Se actualizeaza...',
+            refresh: 'Reincarca',
+            noNotifications: 'Nu exista notificari.',
+            replacementAssigned: 'Inlocuitor atribuit',
+            noReplacement: 'Nu s-a gasit inlocuitor — este necesara interventia manuala.',
+            processing: 'Se proceseaza...',
+            acknowledgeReplace: 'Confirmare si inlocuire',
+            markRead: 'Marcheaza ca citit',
+            validationNote:
+              'Vizualizare principala pentru validare: ture generate, nume angajati, si eticheta PT clara pentru part-time.',
+            shiftsGeneratedSuffix: 'ture generate.',
+            loadingShifts: 'Se incarca turele...',
+            updateBusyDayTitle: 'Actualizeaza pragul pentru zile aglomerate',
+            updateBusyDayBody:
+              'Seteaza valoarea vanzarilor care declanseaza personal suplimentar pentru magazin.',
+            thresholdPlaceholder: 'ex: 2000',
+            cancel: 'Renunta',
+            save: 'Salveaza',
+            positiveNumber: 'Introdu un numar pozitiv.',
+            thresholdSuccess: 'Pragul a fost actualizat.',
+            thresholdError: 'Nu se poate actualiza pragul acum.',
+            generateError:
+              'Nu se pot genera turele acum. Verifica daca backend-ul ruleaza si incearca din nou.',
+            generateForMonthError: 'Nu se pot genera turele pentru luna selectata. Incearca din nou.',
+            loadShiftsError: 'Nu se pot incarca turele. Verifica daca backend-ul ruleaza.',
+            translateToRomanian: 'Tradu in romana',
+            translateToEnglish: 'Tradu in engleza',
+            storeViewLabel: 'Vizualizare magazin',
+          }
+        : {
+            shiftCalendarTitle: 'Shift Calendar',
+            storeView: 'Store view',
+            noStores: 'No stores available',
+            manageStores: 'Manage stores',
+            employees: 'Employees',
+            manageMyShifts: 'Manage my shifts',
+            notifications: 'Notifications',
+            updateThreshold: 'Update threshold',
+            generating: 'Generating...',
+            generateNextMonth: 'Generate',
+            generateForMonth: 'Generate for month',
+            changePassword: 'Change password',
+            logOut: 'Log out',
+            newNotifications: 'New notifications',
+            refreshing: 'Refreshing...',
+            refresh: 'Refresh',
+            noNotifications: 'No notifications yet.',
+            replacementAssigned: 'Replacement assigned',
+            noReplacement: 'No replacement found — manual action required.',
+            processing: 'Processing...',
+            acknowledgeReplace: 'Acknowledge & Replace',
+            markRead: 'Mark read',
+            validationNote:
+              'Main view for validation: generated shifts, employee names, and clear PT label for part-time entries.',
+            shiftsGeneratedSuffix: 'shifts generated.',
+            loadingShifts: 'Loading shifts...',
+            updateBusyDayTitle: 'Update busy day threshold',
+            updateBusyDayBody: 'Set the sales value that triggers extra staffing for your store.',
+            thresholdPlaceholder: 'e.g. 2000',
+            cancel: 'Cancel',
+            save: 'Save',
+            positiveNumber: 'Please enter a positive number.',
+            thresholdSuccess: 'Threshold updated successfully.',
+            thresholdError: 'Could not update threshold right now.',
+            generateError:
+              'Could not generate shifts right now. Please verify backend is running and try again.',
+            generateForMonthError: 'Could not generate shifts for that month. Please try again.',
+            loadShiftsError: 'Could not load shifts. Please verify backend is running.',
+            translateToRomanian: 'Translate to Romanian',
+            translateToEnglish: 'Translate to English',
+            storeViewLabel: 'Store view',
+          },
+    [isRomanian],
+  )
+
+  const nextMonthLabel = useMemo(() => formatMonthYear(getNextMonthDate(), locale), [locale])
   const calendarYearLabel = useMemo(() => calendarDate.getFullYear(), [calendarDate])
   const monthOptions = useMemo(() => {
     const options: { value: string; label: string; year: number; month: number }[] = []
@@ -200,13 +296,13 @@ function CalendarPage() {
       const value = `${year}-${String(month).padStart(2, '0')}`
       options.push({
         value,
-        label: formatMonthYear(date),
+        label: formatMonthYear(date, locale),
         year,
         month,
       })
     }
     return options
-  }, [])
+  }, [locale])
   const [selectedMonthValue, setSelectedMonthValue] = useState(monthOptions[0]?.value ?? '')
 
   const fetchShifts = useCallback(async (): Promise<void> => {
@@ -229,12 +325,12 @@ function CalendarPage() {
       } else if (axios.isAxiosError(error) && typeof error.response?.data === 'string') {
         setErrorMessage(error.response.data)
       } else {
-        setErrorMessage('Could not load shifts. Please verify backend is running.')
+        setErrorMessage(uiText.loadShiftsError)
       }
     } finally {
       setIsLoadingShifts(false)
     }
-  }, [isAdmin, logout, navigate, selectedStoreId])
+  }, [isAdmin, logout, navigate, selectedStoreId, uiText.loadShiftsError])
 
   useEffect(() => {
     void fetchShifts()
@@ -320,9 +416,7 @@ function CalendarPage() {
       if (axios.isAxiosError(error) && typeof error.response?.data === 'string') {
         setErrorMessage(error.response.data)
       } else {
-        setErrorMessage(
-          'Could not generate shifts right now. Please verify backend is running and try again.',
-        )
+        setErrorMessage(uiText.generateError)
       }
       setResponse(null)
     } finally {
@@ -359,7 +453,7 @@ function CalendarPage() {
       if (axios.isAxiosError(error) && typeof error.response?.data === 'string') {
         setErrorMessage(error.response.data)
       } else {
-        setErrorMessage('Could not generate shifts for that month. Please try again.')
+        setErrorMessage(uiText.generateForMonthError)
       }
       setResponse(null)
     } finally {
@@ -376,11 +470,11 @@ function CalendarPage() {
       <section className="top-bar">
         <div>
           <p className="brand">QuickShift</p>
-          <h1>{calendarYearLabel} Shift Calendar</h1>
+          <h1>{calendarYearLabel} {uiText.shiftCalendarTitle}</h1>
           {isAdmin ? (
             <div className="store-filter">
               <label>
-                Store view
+                {uiText.storeView}
                 <select
                   value={selectedStoreId ?? ''}
                   onChange={(event) => {
@@ -390,7 +484,7 @@ function CalendarPage() {
                   disabled={isLoadingStores}
                 >
                   {stores.length === 0 ? (
-                    <option value="">No stores available</option>
+                    <option value="">{uiText.noStores}</option>
                   ) : (
                     stores.map((store) => (
                       <option key={store.id} value={store.id}>
@@ -410,7 +504,7 @@ function CalendarPage() {
               className="admin-btn"
               onClick={() => navigate('/admin/stores')}
             >
-              Manage stores
+              {uiText.manageStores}
             </button>
           ) : null}
           {isManager ? (
@@ -419,7 +513,7 @@ function CalendarPage() {
               className="admin-btn"
               onClick={() => navigate('/employees')}
             >
-              Employees
+              {uiText.employees}
             </button>
           ) : null}
           {currentUser?.role === 'EMPLOYEE' ? (
@@ -429,14 +523,14 @@ function CalendarPage() {
                 className="admin-btn"
                 onClick={() => navigate('/my-shifts')}
               >
-                Manage my shifts
+                {uiText.manageMyShifts}
               </button>
               <button
                 type="button"
                 className="admin-btn"
                 onClick={() => navigate('/notifications')}
               >
-                Notifications
+                {uiText.notifications}
               </button>
             </>
           ) : null}
@@ -446,7 +540,7 @@ function CalendarPage() {
               className="admin-btn"
               onClick={() => navigate('/notifications')}
             >
-              Notifications
+              {uiText.notifications}
             </button>
           ) : null}
           {isManager ? (
@@ -458,7 +552,7 @@ function CalendarPage() {
                 setIsThresholdOpen(true)
               }}
             >
-              Update threshold
+              {uiText.updateThreshold}
             </button>
           ) : null}
           {canGenerate ? (
@@ -469,7 +563,7 @@ function CalendarPage() {
                 onClick={handleGenerateShifts}
                 disabled={isGenerating || (isAdmin && !selectedStoreId)}
               >
-                {isGenerating ? 'Generating...' : `Generate ${nextMonthLabel}`}
+                {isGenerating ? uiText.generating : `${uiText.generateNextMonth} ${nextMonthLabel}`}
               </button>
               <div className="generate-specific">
                 <select
@@ -488,7 +582,7 @@ function CalendarPage() {
                   onClick={handleGenerateForMonth}
                   disabled={isGenerating || (isAdmin && !selectedStoreId)}
                 >
-                  Generate for month
+                  {uiText.generateForMonth}
                 </button>
               </div>
             </>
@@ -496,9 +590,16 @@ function CalendarPage() {
           <button
             type="button"
             className="admin-btn"
+            onClick={() => setLanguage(isRomanian ? 'en' : 'ro')}
+          >
+            {isRomanian ? uiText.translateToEnglish : uiText.translateToRomanian}
+          </button>
+          <button
+            type="button"
+            className="admin-btn"
             onClick={() => navigate('/change-password')}
           >
-            Change password
+            {uiText.changePassword}
           </button>
           <button
             type="button"
@@ -508,7 +609,7 @@ function CalendarPage() {
               navigate('/', { replace: true })
             }}
           >
-            Log out
+            {uiText.logOut}
           </button>
         </div>
       </section>
@@ -516,12 +617,12 @@ function CalendarPage() {
       <section className="calendar-panel">
         <div className="calendar-meta">
           {currentUser?.storeName ? (
-            <p className="meta">Store view: {currentUser.storeName}</p>
+            <p className="meta">{uiText.storeViewLabel}: {currentUser.storeName}</p>
           ) : null}
           {currentUser != null ? (
             <div className="notification-panel">
               <div className="notification-header">
-                <p className="notification-title">New notifications</p>
+                <p className="notification-title">{uiText.newNotifications}</p>
                 <button
                   type="button"
                   className="notification-refresh"
@@ -530,11 +631,11 @@ function CalendarPage() {
                   }}
                   disabled={isLoadingNotifications}
                 >
-                  {isLoadingNotifications ? 'Refreshing...' : 'Refresh'}
+                  {isLoadingNotifications ? uiText.refreshing : uiText.refresh}
                 </button>
               </div>
               {unreadNotifications.length === 0 ? (
-                <p className="notification-empty">No notifications yet.</p>
+                <p className="notification-empty">{uiText.noNotifications}</p>
               ) : (
                 <ul className="notification-list">
                   {unreadNotifications.map((item) => {
@@ -580,8 +681,8 @@ function CalendarPage() {
                           {ackState?.result ? (
                             <p className="notification-ack-result">
                               {ackState.result.replacementFound
-                                ? `Replacement assigned: ${ackState.result.replacementEmployeeName}`
-                                : 'No replacement found — manual action required.'}
+                                ? `${uiText.replacementAssigned}: ${ackState.result.replacementEmployeeName}`
+                                : uiText.noReplacement}
                             </p>
                           ) : null}
                           {ackState?.error ? (
@@ -595,7 +696,7 @@ function CalendarPage() {
                             disabled={ackState?.pending}
                             onClick={handleAck}
                           >
-                            {ackState?.pending ? 'Processing...' : 'Acknowledge & Replace'}
+                            {ackState?.pending ? uiText.processing : uiText.acknowledgeReplace}
                           </button>
                         ) : !isAbsenceNotification && !item.read ? (
                           <button
@@ -606,7 +707,7 @@ function CalendarPage() {
                               void loadNotifications()
                             }}
                           >
-                            Mark read
+                            {uiText.markRead}
                           </button>
                         ) : null}
                       </li>
@@ -617,12 +718,11 @@ function CalendarPage() {
             </div>
           ) : null}
           <p className="meta">
-            Main view for validation: generated shifts, employee names, and clear
-            `PT` label for part-time entries.
+            {uiText.validationNote}
           </p>
           {response ? (
             <p className="status success" role="status">
-              {response.message} {response.generatedShifts} shifts generated.
+              {response.message} {response.generatedShifts} {uiText.shiftsGeneratedSuffix}
             </p>
           ) : null}
           {errorMessage ? (
@@ -639,7 +739,7 @@ function CalendarPage() {
 
         <div className="calendar-wrap" aria-busy={isLoadingShifts}>
           {isLoadingShifts ? (
-            <p className="loading">Loading shifts...</p>
+            <p className="loading">{uiText.loadingShifts}</p>
           ) : (
             <Calendar<ShiftCalendarEvent>
               localizer={localizer}
@@ -688,15 +788,15 @@ function CalendarPage() {
       {isThresholdOpen ? (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
-            <h2>Update busy day threshold</h2>
-            <p>Set the sales value that triggers extra staffing for your store.</p>
+            <h2>{uiText.updateBusyDayTitle}</h2>
+            <p>{uiText.updateBusyDayBody}</p>
             <input
               type="number"
               min={50}
               step={50}
               value={thresholdInput}
               onChange={(event) => setThresholdInput(event.target.value)}
-              placeholder="e.g. 2000"
+              placeholder={uiText.thresholdPlaceholder}
             />
             {thresholdStatus ? <p className="modal-status">{thresholdStatus}</p> : null}
             <div className="modal-actions">
@@ -705,7 +805,7 @@ function CalendarPage() {
                 className="admin-btn"
                 onClick={() => setIsThresholdOpen(false)}
               >
-                Cancel
+                {uiText.cancel}
               </button>
               <button
                 type="button"
@@ -713,20 +813,20 @@ function CalendarPage() {
                 onClick={async () => {
                   const parsed = Number(thresholdInput)
                   if (!Number.isFinite(parsed) || parsed <= 0) {
-                    setThresholdStatus('Please enter a positive number.')
+                    setThresholdStatus(uiText.positiveNumber)
                     return
                   }
 
                   try {
                     await updateMyStoreThreshold(parsed)
-                    setThresholdStatus('Threshold updated successfully.')
+                    setThresholdStatus(uiText.thresholdSuccess)
                     setIsThresholdOpen(false)
                   } catch {
-                    setThresholdStatus('Could not update threshold right now.')
+                    setThresholdStatus(uiText.thresholdError)
                   }
                 }}
               >
-                Save
+                {uiText.save}
               </button>
             </div>
           </div>
