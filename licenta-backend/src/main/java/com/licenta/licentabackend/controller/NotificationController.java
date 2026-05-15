@@ -73,7 +73,8 @@ public class NotificationController {
                 notification.isRead(),
                 storeId,
                 storeName,
-                notification.getRelatedAbsenceRequestId()
+            notification.getRelatedAbsenceRequestId(),
+            notification.getRelatedLeaveRequestId()
         );
     }
 }

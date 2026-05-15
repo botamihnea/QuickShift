@@ -33,6 +33,10 @@ public class Notification {
     @Column(name = "related_absence_request_id")
     private Long relatedAbsenceRequestId;
 
+    // Non-null only for leave-request notifications sent to the manager
+    @Column(name = "related_leave_request_id")
+    private Long relatedLeaveRequestId;
+
     public Notification() {}
 
     public Notification(String message, AppUser recipient, Store store) {
@@ -46,6 +50,11 @@ public class Notification {
     public Notification(String message, AppUser recipient, Store store, Long relatedAbsenceRequestId) {
         this(message, recipient, store);
         this.relatedAbsenceRequestId = relatedAbsenceRequestId;
+    }
+
+    public Notification(String message, AppUser recipient, Store store, Long relatedAbsenceRequestId, Long relatedLeaveRequestId) {
+        this(message, recipient, store, relatedAbsenceRequestId);
+        this.relatedLeaveRequestId = relatedLeaveRequestId;
     }
 
     public Long getId() {
@@ -94,5 +103,13 @@ public class Notification {
 
     public void setRelatedAbsenceRequestId(Long relatedAbsenceRequestId) {
         this.relatedAbsenceRequestId = relatedAbsenceRequestId;
+    }
+
+    public Long getRelatedLeaveRequestId() {
+        return relatedLeaveRequestId;
+    }
+
+    public void setRelatedLeaveRequestId(Long relatedLeaveRequestId) {
+        this.relatedLeaveRequestId = relatedLeaveRequestId;
     }
 }

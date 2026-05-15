@@ -9,5 +9,6 @@ public record NotificationDto(
         boolean read,
         Long storeId,
         String storeName,
-        Long relatedAbsenceRequestId  // null for regular notifications, non-null for absence alerts
+        Long relatedAbsenceRequestId,  // null for regular notifications, non-null for absence alerts
+        Long relatedLeaveRequestId  // null for regular notifications, non-null for leave requests
 ) {}

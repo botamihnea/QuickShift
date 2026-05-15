@@ -1,11 +1,10 @@
 package com.licenta.licentabackend.dto;
 
-public record EmployeeSummaryDto(
+public record EmployeeSelfDto(
         Long id,
         String fullName,
-        String contractType,
-        String shiftPreference,
         Integer remainingLeaveDays,
         Integer holidayRecoveryHours,
-        Integer plannedHours
+        Long storeId,
+        String storeName
 ) {}

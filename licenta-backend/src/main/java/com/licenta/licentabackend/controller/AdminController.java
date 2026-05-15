@@ -87,7 +87,8 @@ public class AdminController {
                         employee.getContractType(),
                         employee.getShiftPreference(),
                         employee.getRemainingLeaveDays(),
-                        employee.getHolidayRecoveryHours()
+                    employee.getHolidayRecoveryHours(),
+                    null
                 ))
                 .toList();
 

@@ -24,18 +24,21 @@ public class AbsenceService {
     private final EmployeeRepository employeeRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
     public AbsenceService(
             AbsenceRequestRepository absenceRequestRepository,
             ShiftRepository shiftRepository,
             EmployeeRepository employeeRepository,
             NotificationRepository notificationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            LeaveRequestRepository leaveRequestRepository) {
         this.absenceRequestRepository = absenceRequestRepository;
         this.shiftRepository = shiftRepository;
         this.employeeRepository = employeeRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -134,6 +137,7 @@ public class AbsenceService {
 
         // 3. Mark the original shift as ABSENT (visible on the main calendar)
         Shift absentShift = absenceRequest.getShift();
+        boolean wasReplacementShift = "REPLACEMENT".equals(absentShift.getStatus());
         absentShift.setStatus("ABSENT");
         shiftRepository.save(absentShift);
 
@@ -154,6 +158,10 @@ public class AbsenceService {
             shiftRepository.save(replacementShift);
 
             absenceRequest.setStatus("COVERED");
+
+            if (!wasReplacementShift) {
+                decrementLeaveDaysIfPossible(absenceRequest.getRequestingEmployee());
+            }
 
             // 6a. Notify the replacement employee
             AppUser replacementUser = replacement.getAppUser();
@@ -271,10 +279,22 @@ public class AbsenceService {
         String requiredContract = hoursToContractType(requiredHours);
 
         // Filter eligible candidates using the same CSP rules as SchedulingService
+        Set<Long> employeesOnLeave = leaveRequestRepository
+            .findByStatusAndRequestingEmployeeStoreIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                "APPROVED",
+                storeId,
+                absenceDate,
+                absenceDate
+            )
+            .stream()
+            .map(req -> req.getRequestingEmployee().getId())
+            .collect(Collectors.toSet());
+
         List<EmployeeTracker> eligible = trackerMap.values().stream()
                 .filter(t -> t.getConsecutiveWorkedDays() < 5) // hard rule: max 5 consecutive days
                 .filter(t -> !t.isHad12HourShiftYesterday()) // hard rule: no 12h back-to-back
                 .filter(t -> !alreadyWorkingThatDay.contains(t.getEmployee().getId())) // not already scheduled
+            .filter(t -> !employeesOnLeave.contains(t.getEmployee().getId())) // not on approved leave
                 .filter(t -> canWorkMoreHoursThisWeek(t, requiredHours)) // weekly hour cap
                 .filter(t -> contractMatches(t.getEmployee().getContractType(), requiredContract)) // contract compat
                 .collect(Collectors.toList());
@@ -354,5 +374,15 @@ public class AbsenceService {
             case "PART_TIME_4H" -> futureHours <= 20;
             default -> false;
         };
+    }
+
+    private void decrementLeaveDaysIfPossible(Employee employee) {
+        Integer remaining = employee.getRemainingLeaveDays();
+        int safeRemaining = remaining != null ? remaining : 0;
+        if (safeRemaining <= 0) {
+            return;
+        }
+        employee.setRemainingLeaveDays(safeRemaining - 1);
+        employeeRepository.save(employee);
     }
 }

@@ -108,8 +108,12 @@ public class ShiftController {
             if (currentUser.getRole() == Role.EMPLOYEE) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only managers and admins can generate shifts.");
             }
+            Integer year = null;
+            Integer month = null;
+            /*
             Integer year = requestDto != null ? requestDto.year() : null;
             Integer month = requestDto != null ? requestDto.month() : null;
+            */
             Long targetStoreId;
 
             if (currentUser.getRole() == Role.ADMIN) {

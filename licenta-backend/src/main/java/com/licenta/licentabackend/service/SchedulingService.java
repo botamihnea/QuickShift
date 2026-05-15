@@ -1,6 +1,8 @@
 package com.licenta.licentabackend.service;
 
 import com.licenta.licentabackend.domain.Employee;
+import com.licenta.licentabackend.domain.LeaveRequest;
+import com.licenta.licentabackend.domain.Notification;
 import com.licenta.licentabackend.domain.Shift;
 import com.licenta.licentabackend.domain.Store;
 import com.licenta.licentabackend.dto.DayForecastDto;
@@ -8,6 +10,9 @@ import com.licenta.licentabackend.dto.EmployeeTracker;
 import com.licenta.licentabackend.dto.GenerateScheduleResponseDto;
 import com.licenta.licentabackend.exceptions.NoEmployeesException;
 import com.licenta.licentabackend.repository.EmployeeRepository;
+import com.licenta.licentabackend.repository.AbsenceRequestRepository;
+import com.licenta.licentabackend.repository.LeaveRequestRepository;
+import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
 import com.licenta.licentabackend.repository.StoreRepository;
 import org.slf4j.Logger;
@@ -21,7 +26,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +39,9 @@ public class SchedulingService {
     private final ShiftRepository shiftRepository;
     private final StoreRepository storeRepository;
     private final CsvReaderService csvReaderService;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final AbsenceRequestRepository absenceRequestRepository;
+    private final NotificationRepository notificationRepository;
     private final String forecastCsvPath;
     int BIG_SALES_THRESHOLD = 2000;
     int MASSIVE_SALES_THRESHOLD = 5000;
@@ -39,11 +50,17 @@ public class SchedulingService {
                              ShiftRepository shiftRepository,
                              StoreRepository storeRepository,
                              CsvReaderService csvReaderService,
+                             LeaveRequestRepository leaveRequestRepository,
+                             AbsenceRequestRepository absenceRequestRepository,
+                             NotificationRepository notificationRepository,
                              @Value("${app.forecast.csv-path:}") String forecastCsvPath) {
         this.employeeRepository = employeeRepository;
         this.shiftRepository = shiftRepository;
         this.storeRepository = storeRepository;
         this.csvReaderService = csvReaderService;
+        this.leaveRequestRepository = leaveRequestRepository;
+        this.absenceRequestRepository = absenceRequestRepository;
+        this.notificationRepository = notificationRepository;
         this.forecastCsvPath = forecastCsvPath;
     }
 
@@ -95,10 +112,16 @@ public class SchedulingService {
                 : shiftRepository.findByEmployeeStoreIdAndShiftDateBetween(storeId, monthStart, monthEnd);
 
         if (!existingShifts.isEmpty()) {
+            List<Long> shiftIds = existingShifts.stream()
+                .map(Shift::getId)
+                .toList();
+            absenceRequestRepository.deleteByShiftIdIn(shiftIds);
             shiftRepository.deleteAll(existingShifts);
         }
 
-        int generatedShifts = generateSchedule(forecastDays, targetEmployees);
+        Map<LocalDate, Set<Long>> leaveMap = buildLeaveMap(storeId, monthStart, monthEnd);
+
+        int generatedShifts = generateSchedule(forecastDays, targetEmployees, leaveMap);
 
         return new GenerateScheduleResponseDto(
                 targetMonth.getYear(),
@@ -118,6 +141,12 @@ public class SchedulingService {
 
     @Transactional
     public int generateSchedule(List<DayForecastDto> forecastDays, List<Employee> allEmployees) {
+        Map<LocalDate, Set<Long>> leaveMap = buildLeaveMap(null, forecastDays);
+        return generateSchedule(forecastDays, allEmployees, leaveMap);
+    }
+
+    @Transactional
+    public int generateSchedule(List<DayForecastDto> forecastDays, List<Employee> allEmployees, Map<LocalDate, Set<Long>> leaveMap) {
         log.info("Initializing Heuristic CSP Solver...");
         if (allEmployees.isEmpty()) {
             throw new NoEmployeesException("No employees found in the database!");
@@ -172,9 +201,11 @@ public class SchedulingService {
             int currentMorningCount = 0;
             int currentEveningCount = 0;
 
+            Set<Long> employeesOnLeave = leaveMap.getOrDefault(dayForecast.getDate(), Set.of());
             List<EmployeeTracker> availableTrackers = trackers.stream()
                     .filter(t -> t.getConsecutiveWorkedDays() < 5)
                     .filter(t -> !t.isHad12HourShiftYesterday())
+                    .filter(t -> !employeesOnLeave.contains(t.getEmployee().getId()))
                     .collect(Collectors.toList());
             /*
             "Inițial, am încercat să optimizez algoritmul Greedy pentru a grupa zilele libere ale angajaților (pentru work-life balance).
@@ -226,6 +257,43 @@ public class SchedulingService {
 
         log.info("✅ Successfully generated and saved {} shifts in the database!", shiftsToSave.size());
         return shiftsToSave.size();
+    }
+
+    private Map<LocalDate, Set<Long>> buildLeaveMap(Long storeId, LocalDate startDate, LocalDate endDate) {
+        List<LeaveRequest> leaveRequests = storeId == null
+            ? leaveRequestRepository.findByStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                "APPROVED",
+                endDate,
+                startDate
+            )
+            : leaveRequestRepository.findByStatusAndRequestingEmployeeStoreIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                "APPROVED",
+                storeId,
+                endDate,
+                startDate
+            );
+
+        Map<LocalDate, Set<Long>> leaveMap = new HashMap<>();
+        for (LeaveRequest request : leaveRequests) {
+            LocalDate cursor = request.getStartDate();
+            LocalDate end = request.getEndDate();
+            Long employeeId = request.getRequestingEmployee().getId();
+            while (!cursor.isAfter(end)) {
+                leaveMap.computeIfAbsent(cursor, ignored -> new java.util.HashSet<>()).add(employeeId);
+                cursor = cursor.plusDays(1);
+            }
+        }
+
+        return leaveMap;
+    }
+
+    private Map<LocalDate, Set<Long>> buildLeaveMap(Long storeId, List<DayForecastDto> forecastDays) {
+        if (forecastDays.isEmpty()) {
+            return new HashMap<>();
+        }
+        LocalDate start = forecastDays.get(0).getDate();
+        LocalDate end = forecastDays.get(forecastDays.size() - 1).getDate();
+        return buildLeaveMap(storeId, start, end);
     }
 
     private YearMonth resolveTargetMonth(Integer year, Integer month) {

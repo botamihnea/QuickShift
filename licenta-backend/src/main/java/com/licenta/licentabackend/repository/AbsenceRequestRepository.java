@@ -14,4 +14,6 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
     Optional<AbsenceRequest> findByShiftIdAndStatusIn(Long shiftId, List<String> statuses);
 
     List<AbsenceRequest> findByRequestingEmployeeId(Long employeeId);
+
+    void deleteByShiftIdIn(List<Long> shiftIds);
 }
