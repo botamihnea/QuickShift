@@ -44,6 +44,23 @@
   gap: 0.5rem;
 }
 
+.employees-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-muted);
+  font: 600 0.8rem/1 var(--font-ui);
+}
+
+.employees-filter select {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  background: rgb(255 255 255 / 74%);
+  color: var(--ink-muted);
+  font: 700 0.82rem/1 var(--font-ui);
+}
+
 .employees-secondary {
   border: 1px solid var(--surface-border-strong);
   border-radius: 14px;

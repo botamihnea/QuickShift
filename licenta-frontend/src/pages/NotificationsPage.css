@@ -159,6 +159,48 @@
 .ack-result.warning { color: #e65100; }
 .ack-result.error   { color: #c62828; }
 
+.leave-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: center;
+}
+
+.leave-deny-panel {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 220px;
+}
+
+.leave-deny-label {
+  font: 600 0.78rem/1 var(--font-ui);
+  color: var(--ink-muted);
+}
+
+.leave-deny-input {
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  font: 500 0.82rem/1.3 var(--font-ui);
+  resize: vertical;
+}
+
+.leave-deny-input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.leave-deny-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.leave-action-stack {
+  display: grid;
+  gap: 0.4rem;
+  align-self: center;
+}
+
 .notifications-empty {
   margin: 0;
   color: var(--ink-subtle);

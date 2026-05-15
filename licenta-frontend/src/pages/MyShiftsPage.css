@@ -32,6 +32,12 @@
   font: 700 0.76rem/1 var(--font-ui);
 }
 
+.my-shifts-welcome {
+  margin: 0.35rem 0 0;
+  color: var(--ink-subtle);
+  font: 600 0.88rem/1 var(--font-ui);
+}
+
 .my-shifts-header h1 {
   margin: 0.35rem 0 0;
   color: var(--ink-strong);
@@ -226,6 +232,21 @@
   box-sizing: border-box;
 }
 
+.modal-input {
+  width: 100%;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.92rem;
+  font-family: var(--font-ui);
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
 .modal-textarea:focus {
   outline: 2px solid var(--brand);
   outline-offset: 1px;
@@ -252,6 +273,17 @@
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
+}
+
+.leave-grid {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.leave-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
 }
 
 @media (max-width: 1024px) {

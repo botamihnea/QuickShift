@@ -1,9 +1,11 @@
 import axios from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getMyEmployee } from '../api/employeeService'
+import { requestLeave } from '../api/leaveService'
 import { getMyShifts, reportAbsence } from '../api/shiftService'
 import { useAuth } from '../auth/useAuth'
-import type { BackendShift } from '../types'
+import type { BackendShift, EmployeeSelf } from '../types'
 import './MyShiftsPage.css'
 
 type ShiftDateValue = string | [number, number, number] | { year: number; month: number; day: number }
@@ -53,6 +55,16 @@ function formatDateLabel(value: ShiftDateValue): string {
     : new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
 }
 
+function getWelcomeName(fullName?: string | null, email?: string | null): string {
+  if (fullName && fullName.trim().length > 0) {
+    return fullName
+  }
+  if (email) {
+    return email.split('@')[0] || 'there'
+  }
+  return 'there'
+}
+
 function isFutureShift(shift: BackendShift): boolean {
   const date = toLocalDate(shift.shiftDate)
   const today = new Date()
@@ -60,9 +72,50 @@ function isFutureShift(shift: BackendShift): boolean {
   return date > today
 }
 
+function toInputDate(value: string): Date | null {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function calculateInclusiveDays(start: string, end: string): number {
+  const startDate = toInputDate(start)
+  const endDate = toInputDate(end)
+  if (!startDate || !endDate) return 0
+  const msPerDay = 1000 * 60 * 60 * 24
+  const diff = Math.floor((endDate.getTime() - startDate.getTime()) / msPerDay)
+  return diff >= 0 ? diff + 1 : 0
+}
+
+function calculateDeductibleDays(calendarDays: number): number {
+  const coefficient = 5 / 7
+  return Math.ceil(calendarDays * coefficient)
+}
+
+function toInputValue(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getLeaveWindow(reference = new Date()): { start: Date; end: Date } {
+  const start = new Date(reference.getFullYear(), reference.getMonth() + 1, 1)
+  const end = new Date(reference.getFullYear(), reference.getMonth() + 2, 0)
+  return { start, end }
+}
+
+function isWithinLeaveWindow(startValue: string, endValue: string, windowStart: Date, windowEnd: Date): boolean {
+  const start = toInputDate(startValue)
+  const end = toInputDate(endValue)
+  if (!start || !end) return false
+  return start >= windowStart && end <= windowEnd
+}
+
 function MyShiftsPage() {
   const navigate = useNavigate()
   const { currentUser, logout } = useAuth()
+  const [employeeProfile, setEmployeeProfile] = useState<EmployeeSelf | null>(null)
   const [shifts, setShifts] = useState<BackendShift[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -76,14 +129,26 @@ function MyShiftsPage() {
   // Track which shifts are already reported
   const [reportedShiftIds, setReportedShiftIds] = useState<Set<number>>(new Set())
 
+  // Leave request state
+  const [leaveOpen, setLeaveOpen] = useState(false)
+  const [leaveStart, setLeaveStart] = useState('')
+  const [leaveEnd, setLeaveEnd] = useState('')
+  const [leaveReason, setLeaveReason] = useState('')
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false)
+  const [leaveResult, setLeaveResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const leaveWindow = useMemo(() => getLeaveWindow(), [])
+  const leaveWindowStart = useMemo(() => toInputValue(leaveWindow.start), [leaveWindow])
+  const leaveWindowEnd = useMemo(() => toInputValue(leaveWindow.end), [leaveWindow])
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
       setErrorMessage(null)
 
       try {
-        const results = await getMyShifts()
+        const [results, profile] = await Promise.all([getMyShifts(), getMyEmployee()])
         setShifts(results)
+        setEmployeeProfile(profile)
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
           logout()
@@ -135,6 +200,48 @@ function MyShiftsPage() {
     }
   }
 
+  const openLeaveModal = () => {
+    setLeaveOpen(true)
+    setLeaveStart(leaveWindowStart)
+    setLeaveEnd(leaveWindowStart)
+    setLeaveReason('')
+    setLeaveResult(null)
+  }
+
+  const closeLeaveModal = () => {
+    setLeaveOpen(false)
+    setLeaveStart('')
+    setLeaveEnd('')
+    setLeaveReason('')
+    setLeaveResult(null)
+  }
+
+  const submitLeaveRequest = async () => {
+    if (!leaveStart || !leaveEnd) return
+    setLeaveSubmitting(true)
+    setLeaveResult(null)
+
+    try {
+      await requestLeave({
+        startDate: leaveStart,
+        endDate: leaveEnd,
+        reason: leaveReason || undefined,
+      })
+      setLeaveResult({
+        type: 'success',
+        text: 'Leave request submitted. Your manager will review it shortly.',
+      })
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : 'Could not submit leave request. Please try again.'
+      setLeaveResult({ type: 'error', text: msg })
+    } finally {
+      setLeaveSubmitting(false)
+    }
+  }
+
   function getStatusBadge(shift: BackendShift) {
     if (shift.status === 'ABSENT') return <span className="shift-badge absent">Absent</span>
     if (shift.status === 'REPLACEMENT') return <span className="shift-badge replacement">Replacement</span>
@@ -147,14 +254,23 @@ function MyShiftsPage() {
         <header className="my-shifts-header">
           <div>
             <p className="my-shifts-brand">QuickShift</p>
+            <p className="my-shifts-welcome">Welcome {getWelcomeName(employeeProfile?.fullName, currentUser?.email)}</p>
             <h1>{yearLabel} Your Shift Calendar</h1>
             <p className="my-shifts-subtitle">
               {currentUser?.storeName ? `Store: ${currentUser.storeName}` : 'Your upcoming shifts.'}
             </p>
+            {employeeProfile ? (
+              <p className="my-shifts-subtitle">
+                Leave balance: {employeeProfile.remainingLeaveDays ?? 0} days
+              </p>
+            ) : null}
           </div>
           <div className="my-shifts-actions">
             <button type="button" className="my-shifts-secondary" onClick={() => navigate('/schedule')}>
               Back to schedule
+            </button>
+            <button type="button" className="my-shifts-secondary" onClick={openLeaveModal}>
+              Request Leave
             </button>
             <button type="button" className="my-shifts-secondary" onClick={() => navigate('/notifications')}>
               Notifications
@@ -277,6 +393,105 @@ function MyShiftsPage() {
                   Close
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Leave Request Modal */}
+      {leaveOpen ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="leave-modal-title">
+          <div className="modal-card">
+            <h2 id="leave-modal-title">Request Leave</h2>
+            <p className="modal-desc">
+              Requests are allowed only for {leaveWindow.start.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}.
+            </p>
+            <div className="leave-grid">
+              <label className="modal-label" htmlFor="leave-start">
+                Start date
+              </label>
+              <input
+                id="leave-start"
+                className="modal-input"
+                type="date"
+                value={leaveStart}
+                onChange={(event) => setLeaveStart(event.target.value)}
+                min={leaveWindowStart}
+                max={leaveWindowEnd}
+                disabled={leaveSubmitting}
+              />
+              <label className="modal-label" htmlFor="leave-end">
+                End date
+              </label>
+              <input
+                id="leave-end"
+                className="modal-input"
+                type="date"
+                value={leaveEnd}
+                onChange={(event) => setLeaveEnd(event.target.value)}
+                min={leaveWindowStart}
+                max={leaveWindowEnd}
+                disabled={leaveSubmitting}
+              />
+            </div>
+            <label htmlFor="leave-reason" className="modal-label">
+              Reason <span className="modal-optional">(optional)</span>
+            </label>
+            <textarea
+              id="leave-reason"
+              className="modal-textarea"
+              rows={3}
+              placeholder="e.g. Planned vacation"
+              value={leaveReason}
+              onChange={(event) => setLeaveReason(event.target.value)}
+              disabled={leaveSubmitting}
+            />
+            {employeeProfile ? (
+              <p className="leave-summary">
+                Requested: {calculateInclusiveDays(leaveStart, leaveEnd)} days · Deductible: {calculateDeductibleDays(calculateInclusiveDays(leaveStart, leaveEnd))} · Remaining: {employeeProfile.remainingLeaveDays ?? 0}
+              </p>
+            ) : null}
+            {employeeProfile &&
+            calculateDeductibleDays(calculateInclusiveDays(leaveStart, leaveEnd)) > (employeeProfile.remainingLeaveDays ?? 0) ? (
+              <p className="modal-result error" role="alert">
+                Requested days exceed your remaining leave balance.
+              </p>
+            ) : null}
+            {leaveStart && leaveEnd && !isWithinLeaveWindow(leaveStart, leaveEnd, leaveWindow.start, leaveWindow.end) ? (
+              <p className="modal-result error" role="alert">
+                Leave requests are only allowed for the next month.
+              </p>
+            ) : null}
+            {employeeProfile && (employeeProfile.remainingLeaveDays ?? 0) <= 0 ? (
+              <p className="modal-result error" role="alert">
+                No remaining leave days. Please request directly from your manager.
+              </p>
+            ) : null}
+            {leaveResult ? (
+              <p className={`modal-result ${leaveResult.type}`} role="alert">
+                {leaveResult.text}
+              </p>
+            ) : null}
+            <div className="modal-actions">
+              <button type="button" className="my-shifts-secondary" onClick={closeLeaveModal} disabled={leaveSubmitting}>
+                Close
+              </button>
+              <button
+                type="button"
+                className="report-absence-btn"
+                onClick={submitLeaveRequest}
+                disabled={
+                  leaveSubmitting ||
+                  !leaveStart ||
+                  !leaveEnd ||
+                  calculateInclusiveDays(leaveStart, leaveEnd) === 0 ||
+                  (employeeProfile?.remainingLeaveDays ?? 0) <= 0 ||
+                  calculateDeductibleDays(calculateInclusiveDays(leaveStart, leaveEnd)) > (employeeProfile?.remainingLeaveDays ?? 0) ||
+                  !isWithinLeaveWindow(leaveStart, leaveEnd, leaveWindow.start, leaveWindow.end)
+                }
+              >
+                {leaveSubmitting ? 'Sending...' : 'Submit request'}
+              </button>
             </div>
           </div>
         </div>

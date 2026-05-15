@@ -45,6 +45,16 @@ export type EmployeeSummary = {
   shiftPreference: 'MORNING' | 'EVENING' | 'ANY'
   remainingLeaveDays: number | null
   holidayRecoveryHours: number | null
+  plannedHours: number | null
+}
+
+export type EmployeeSelf = {
+  id: number
+  fullName: string
+  remainingLeaveDays: number | null
+  holidayRecoveryHours: number | null
+  storeId: number | null
+  storeName: string | null
 }
 
 export type StoreStaffResponse = {
@@ -60,6 +70,7 @@ export type NotificationItem = {
   storeId: number | null
   storeName: string | null
   relatedAbsenceRequestId: number | null
+  relatedLeaveRequestId: number | null
 }
 
 export type CreateStoreRequest = {
@@ -124,4 +135,22 @@ export type AbsenceReportRequest = {
 export type AcknowledgeAbsenceResponse = {
   replacementFound: boolean
   replacementEmployeeName: string | null
+}
+
+export type LeaveRequestCreateRequest = {
+  startDate: string
+  endDate: string
+  reason?: string
+}
+
+export type LeaveRequestDecisionRequest = {
+  reason?: string
+}
+
+export type LeaveRequestResponse = {
+  id: number
+  status: 'PENDING' | 'APPROVED' | 'DENIED'
+  requestedDays: number
+  startDate: string
+  endDate: string
 }

@@ -11,10 +11,19 @@ import {
 } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { generateNextMonthShifts, generateScheduleForMonth, getAllShifts, acknowledgeAbsence } from '../api/shiftService'
+import { approveLeaveRequest, denyLeaveRequest } from '../api/leaveService'
 import { getNotifications, markNotificationRead } from '../api/notificationService'
 import { getStores, updateMyStoreThreshold } from '../api/storeService'
 import { useAuth } from '../auth/useAuth'
-import type { AcknowledgeAbsenceResponse, BackendShift, GenerateScheduleResponse, NotificationItem, ShiftCalendarEvent, StoreSummary } from '../types'
+import type {
+  AcknowledgeAbsenceResponse,
+  BackendShift,
+  GenerateScheduleResponse,
+  LeaveRequestResponse,
+  NotificationItem,
+  ShiftCalendarEvent,
+  StoreSummary,
+} from '../types'
 import './CalendarPage.css'
 
 const localizer = momentLocalizer(moment)
@@ -70,14 +79,14 @@ function formatHourInterval(shiftType: string): string {
   return `${start}-${end}`
 }
 
-function toCompactEmployeeName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/)
-  if (parts.length <= 1) {
-    return fullName
+function getWelcomeName(email?: string | null, role?: string | null): string {
+  if (role === 'ADMIN') {
+    return 'Admin'
   }
-
-  const lastInitial = parts[parts.length - 1][0]?.toUpperCase() ?? ''
-  return `${parts[0]} ${lastInitial}.`
+  if (role === 'MANAGER' && email) {
+    return email.split('@')[0] || 'Manager'
+  }
+  return 'there'
 }
 
 function buildMonthLabel(shiftType: string, employeeName: string): string {
@@ -92,46 +101,48 @@ function buildMonthLabel(shiftType: string, employeeName: string): string {
 }
 
 function toCalendarEvents(shifts: BackendShift[]): ShiftCalendarEvent[] {
-  return shifts
-    .map((shift) => {
-      const baseDate = toLocalDate(shift.shiftDate)
-      const { startHour, endHour } = parseShiftHours(shift.shiftType)
+  const events: ShiftCalendarEvent[] = []
 
-      if (Number.isNaN(baseDate.getTime())) {
-        return null
-      }
+  for (const shift of shifts) {
+    const baseDate = toLocalDate(shift.shiftDate)
+    const { startHour, endHour } = parseShiftHours(shift.shiftType)
 
-      const start = new Date(baseDate)
-      start.setHours(startHour, 0, 0, 0)
+    if (Number.isNaN(baseDate.getTime())) {
+      continue
+    }
 
-      const end = new Date(baseDate)
-      end.setHours(endHour, 0, 0, 0)
+    const start = new Date(baseDate)
+    start.setHours(startHour, 0, 0, 0)
 
-      const status = shift.status ?? 'SCHEDULED'
-      const isReplacement = status === 'REPLACEMENT'
-      const employeeLabel = status === 'ABSENT'
-        ? `[ABSENT] ${shift.employee.fullName}`
-        : isReplacement
-          ? `[+] ${shift.employee.fullName}`
-          : shift.employee.fullName
+    const end = new Date(baseDate)
+    end.setHours(endHour, 0, 0, 0)
 
-      return {
-        title: buildMonthLabel(shift.shiftType, employeeLabel),
-        start,
-        end,
-        allDay: false,
-        resource: {
-          isPartTime: shift.shiftType.startsWith('PART_TIME'),
-          rawShiftType: shift.shiftType,
-          employeeName: shift.employee.fullName,
-          // Always show full name — no compact initials anywhere on the calendar
-          compactEmployeeName: employeeLabel,
-          timeRange: formatHourInterval(shift.shiftType),
-          status,
-        },
-      }
+    const status = shift.status ?? 'SCHEDULED'
+    const isReplacement = status === 'REPLACEMENT'
+    const employeeLabel = status === 'ABSENT'
+      ? `[ABSENT] ${shift.employee.fullName}`
+      : isReplacement
+        ? `[+] ${shift.employee.fullName}`
+        : shift.employee.fullName
+
+    events.push({
+      title: buildMonthLabel(shift.shiftType, employeeLabel),
+      start,
+      end,
+      allDay: false,
+      resource: {
+        isPartTime: shift.shiftType.startsWith('PART_TIME'),
+        rawShiftType: shift.shiftType,
+        employeeName: shift.employee.fullName,
+        // Always show full name — no compact initials anywhere on the calendar
+        compactEmployeeName: employeeLabel,
+        timeRange: formatHourInterval(shift.shiftType),
+        status,
+      },
     })
-    .filter((event): event is ShiftCalendarEvent => event !== null)
+  }
+
+  return events
 }
 
 type ShiftEventRendererProps = EventProps<ShiftCalendarEvent>
@@ -168,6 +179,7 @@ function CalendarPage() {
   const navigate = useNavigate()
   const { currentUser, isAdmin, logout } = useAuth()
   const isManager = currentUser?.role === 'MANAGER'
+  const welcomeName = getWelcomeName(currentUser?.email, currentUser?.role)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
@@ -178,6 +190,21 @@ function CalendarPage() {
   // Per-notification acknowledge state for the inline CalendarPage panel
   const [calendarAckState, setCalendarAckState] = useState<
     Record<number, { pending: boolean; result: AcknowledgeAbsenceResponse | null; error: string | null }>
+  >({})
+  const [calendarLeaveState, setCalendarLeaveState] = useState<
+    Record<
+      number,
+      {
+        pending: boolean
+        decision: 'approved' | 'denied' | null
+        response: LeaveRequestResponse | null
+        error: string | null
+        denyOpen: boolean
+        reason: string
+        regeneratePending: boolean
+        regenerateResult: string | null
+      }
+    >
   >({})
   const [thresholdInput, setThresholdInput] = useState('')
   const [thresholdStatus, setThresholdStatus] = useState<string | null>(null)
@@ -216,6 +243,17 @@ function CalendarPage() {
             noReplacement: 'Nu s-a gasit inlocuitor — este necesara interventia manuala.',
             processing: 'Se proceseaza...',
             acknowledgeReplace: 'Confirmare si inlocuire',
+            approveLeave: 'Aproba concediu',
+            denyLeave: 'Respinge',
+            denialReason: 'Motiv respingere',
+            confirmDeny: 'Confirma respingerea',
+            cancelDeny: 'Renunta',
+            leaveApproved: 'Concediu aprobat',
+            leaveDenied: 'Concediu respins',
+            regenerateMonth: 'Regenereaza luna',
+            regenerating: 'Se regenereaza...',
+            regenerateSuccess: 'Ture regenerate pentru luna respectiva.',
+            regenerateError: 'Nu se pot regenera turele acum.',
             markRead: 'Marcheaza ca citit',
             validationNote:
               'Vizualizare principala pentru validare: ture generate, nume angajati, si eticheta PT clara pentru part-time.',
@@ -260,6 +298,17 @@ function CalendarPage() {
             noReplacement: 'No replacement found — manual action required.',
             processing: 'Processing...',
             acknowledgeReplace: 'Acknowledge & Replace',
+            approveLeave: 'Approve leave',
+            denyLeave: 'Deny',
+            denialReason: 'Denial reason',
+            confirmDeny: 'Confirm deny',
+            cancelDeny: 'Cancel',
+            leaveApproved: 'Leave approved',
+            leaveDenied: 'Leave denied',
+            regenerateMonth: 'Regenerate month',
+            regenerating: 'Regenerating...',
+            regenerateSuccess: 'Shifts regenerated for that month.',
+            regenerateError: 'Could not regenerate shifts right now.',
             markRead: 'Mark read',
             validationNote:
               'Main view for validation: generated shifts, employee names, and clear PT label for part-time entries.',
@@ -286,6 +335,7 @@ function CalendarPage() {
 
   const nextMonthLabel = useMemo(() => formatMonthYear(getNextMonthDate(), locale), [locale])
   const calendarYearLabel = useMemo(() => calendarDate.getFullYear(), [calendarDate])
+  /*
   const monthOptions = useMemo(() => {
     const options: { value: string; label: string; year: number; month: number }[] = []
     const base = new Date()
@@ -304,6 +354,13 @@ function CalendarPage() {
     return options
   }, [locale])
   const [selectedMonthValue, setSelectedMonthValue] = useState(monthOptions[0]?.value ?? '')
+  */
+
+  const resolveYearMonth = (dateValue: string): { year: number; month: number } | null => {
+    const parsed = new Date(dateValue)
+    if (Number.isNaN(parsed.getTime())) return null
+    return { year: parsed.getFullYear(), month: parsed.getMonth() + 1 }
+  }
 
   const fetchShifts = useCallback(async (): Promise<void> => {
     setIsLoadingShifts(true)
@@ -424,6 +481,7 @@ function CalendarPage() {
     }
   }
 
+  /*
   const handleGenerateForMonth = async () => {
     const picked = monthOptions.find((option) => option.value === selectedMonthValue)
     if (!picked) {
@@ -460,6 +518,212 @@ function CalendarPage() {
       setIsGenerating(false)
     }
   }
+  */
+
+  const handleApproveLeave = async (notificationId: number, leaveRequestId: number) => {
+    setCalendarLeaveState((prev) => ({
+      ...prev,
+      [notificationId]: {
+        pending: true,
+        decision: null,
+        response: null,
+        error: null,
+        denyOpen: false,
+        reason: '',
+        regeneratePending: false,
+        regenerateResult: null,
+      },
+    }))
+
+    try {
+      const response = await approveLeaveRequest(leaveRequestId)
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          pending: false,
+          decision: 'approved',
+          response,
+          error: null,
+          denyOpen: false,
+          reason: '',
+          regeneratePending: false,
+          regenerateResult: null,
+        },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : uiText.generateError
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          pending: false,
+          decision: null,
+          response: null,
+          error: msg,
+          denyOpen: false,
+          reason: '',
+          regeneratePending: false,
+          regenerateResult: null,
+        },
+      }))
+    }
+  }
+
+  const handleDenyLeave = async (notificationId: number, leaveRequestId: number, reason?: string) => {
+    setCalendarLeaveState((prev) => ({
+      ...prev,
+      [notificationId]: {
+        ...(prev[notificationId] ?? {
+          pending: false,
+          decision: null,
+          response: null,
+          error: null,
+          denyOpen: false,
+          reason: '',
+          regeneratePending: false,
+          regenerateResult: null,
+        }),
+        pending: true,
+        decision: null,
+        error: null,
+      },
+    }))
+
+    try {
+      await denyLeaveRequest(leaveRequestId, reason ? { reason } : undefined)
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          pending: false,
+          decision: 'denied',
+          response: null,
+          error: null,
+          denyOpen: false,
+          reason: '',
+          regeneratePending: false,
+          regenerateResult: null,
+        },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : uiText.generateError
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          ...(prev[notificationId] ?? {
+            pending: false,
+            decision: null,
+            response: null,
+            error: null,
+            denyOpen: false,
+            reason: '',
+            regeneratePending: false,
+            regenerateResult: null,
+          }),
+          pending: false,
+          decision: null,
+          error: msg,
+        },
+      }))
+    }
+  }
+
+  const handleRegenerateForLeave = async (notificationId: number, response: LeaveRequestResponse) => {
+    const resolved = resolveYearMonth(response.startDate)
+    if (!resolved) {
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          ...(prev[notificationId] ?? {
+            pending: false,
+            decision: null,
+            response,
+            error: null,
+            denyOpen: false,
+            reason: '',
+            regeneratePending: false,
+            regenerateResult: null,
+          }),
+          regenerateResult: uiText.regenerateError,
+        },
+      }))
+      return
+    }
+
+    setCalendarLeaveState((prev) => ({
+      ...prev,
+      [notificationId]: {
+        ...(prev[notificationId] ?? {
+          pending: false,
+          decision: null,
+          response,
+          error: null,
+          denyOpen: false,
+          reason: '',
+          regeneratePending: false,
+          regenerateResult: null,
+        }),
+        regeneratePending: true,
+        regenerateResult: null,
+      },
+    }))
+
+    try {
+      await generateScheduleForMonth(
+        resolved.year,
+        resolved.month,
+        isAdmin ? selectedStoreId ?? undefined : undefined,
+      )
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          ...(prev[notificationId] ?? {
+            pending: false,
+            decision: null,
+            response,
+            error: null,
+            denyOpen: false,
+            reason: '',
+            regeneratePending: false,
+            regenerateResult: null,
+          }),
+          regeneratePending: false,
+          regenerateResult: uiText.regenerateSuccess,
+        },
+      }))
+      void fetchShifts()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : uiText.regenerateError
+      setCalendarLeaveState((prev) => ({
+        ...prev,
+        [notificationId]: {
+          ...(prev[notificationId] ?? {
+            pending: false,
+            decision: null,
+            response,
+            error: null,
+            denyOpen: false,
+            reason: '',
+            regeneratePending: false,
+            regenerateResult: null,
+          }),
+          regeneratePending: false,
+          regenerateResult: msg,
+        },
+      }))
+    }
+  }
 
   const unreadNotifications = notifications.filter((item) => !item.read)
   const canGenerate = isAdmin || isManager
@@ -470,6 +734,7 @@ function CalendarPage() {
       <section className="top-bar">
         <div>
           <p className="brand">QuickShift</p>
+          <p className="brand-subtitle">Welcome {welcomeName}</p>
           <h1>{calendarYearLabel} {uiText.shiftCalendarTitle}</h1>
           {isAdmin ? (
             <div className="store-filter">
@@ -565,6 +830,7 @@ function CalendarPage() {
               >
                 {isGenerating ? uiText.generating : `${uiText.generateNextMonth} ${nextMonthLabel}`}
               </button>
+              {/*
               <div className="generate-specific">
                 <select
                   value={selectedMonthValue}
@@ -585,6 +851,7 @@ function CalendarPage() {
                   {uiText.generateForMonth}
                 </button>
               </div>
+              */}
             </>
           ) : null}
           <button
@@ -641,6 +908,8 @@ function CalendarPage() {
                   {unreadNotifications.map((item) => {
                     const ackState = calendarAckState[item.id]
                     const isAbsenceNotification = item.relatedAbsenceRequestId != null
+                    const isLeaveNotification = item.relatedLeaveRequestId != null
+                    const leaveState = calendarLeaveState[item.id]
 
                     const handleAck = async () => {
                       if (!item.relatedAbsenceRequestId) return
@@ -688,8 +957,133 @@ function CalendarPage() {
                           {ackState?.error ? (
                             <p className="notification-ack-result error">{ackState.error}</p>
                           ) : null}
+                          {leaveState?.decision === 'approved' ? (
+                            <p className="notification-ack-result">{uiText.leaveApproved}</p>
+                          ) : null}
+                          {leaveState?.decision === 'denied' ? (
+                            <p className="notification-ack-result warning">{uiText.leaveDenied}</p>
+                          ) : null}
+                          {leaveState?.error ? (
+                            <p className="notification-ack-result error">{leaveState.error}</p>
+                          ) : null}
+                          {leaveState?.regenerateResult ? (
+                            <p className="notification-ack-result warning">{leaveState.regenerateResult}</p>
+                          ) : null}
                         </div>
-                        {isAbsenceNotification && !ackState?.result ? (
+                        {leaveState?.decision === 'approved' ? (
+                          <div className="notification-action-stack">
+                            {leaveState.response ? (
+                              <button
+                                type="button"
+                                className="notification-acknowledge"
+                                disabled={leaveState.regeneratePending}
+                                onClick={() => handleRegenerateForLeave(item.id, leaveState.response!)}
+                              >
+                                {leaveState.regeneratePending ? uiText.regenerating : uiText.regenerateMonth}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : leaveState?.decision === 'denied' ? null : isLeaveNotification ? (
+                          leaveState?.denyOpen ? (
+                            <div className="notification-deny-panel">
+                              <label className="notification-deny-label" htmlFor={`calendar-deny-${item.id}`}>
+                                {uiText.denialReason}
+                              </label>
+                              <textarea
+                                id={`calendar-deny-${item.id}`}
+                                className="notification-deny-input"
+                                rows={2}
+                                value={leaveState?.reason ?? ''}
+                                onChange={(event) =>
+                                  setCalendarLeaveState((prev) => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...(prev[item.id] ?? {
+                                        pending: false,
+                                        decision: null,
+                                        response: null,
+                                        error: null,
+                                        denyOpen: true,
+                                        reason: '',
+                                        regeneratePending: false,
+                                        regenerateResult: null,
+                                      }),
+                                      reason: event.target.value,
+                                    },
+                                  }))
+                                }
+                                disabled={leaveState?.pending}
+                              />
+                              <div className="notification-deny-actions">
+                                <button
+                                  type="button"
+                                  className="notification-acknowledge"
+                                  disabled={leaveState?.pending}
+                                  onClick={() =>
+                                    handleDenyLeave(item.id, item.relatedLeaveRequestId!, leaveState?.reason?.trim())
+                                  }
+                                >
+                                  {leaveState?.pending ? uiText.processing : uiText.confirmDeny}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="notification-mark"
+                                  disabled={leaveState?.pending}
+                                  onClick={() =>
+                                    setCalendarLeaveState((prev) => ({
+                                      ...prev,
+                                      [item.id]: {
+                                        pending: false,
+                                        decision: null,
+                                        response: null,
+                                        error: null,
+                                        denyOpen: false,
+                                        reason: '',
+                                        regeneratePending: false,
+                                        regenerateResult: null,
+                                      },
+                                    }))
+                                  }
+                                >
+                                  {uiText.cancelDeny}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="notification-action-buttons">
+                              <button
+                                type="button"
+                                className="notification-acknowledge"
+                                disabled={leaveState?.pending}
+                                onClick={() => handleApproveLeave(item.id, item.relatedLeaveRequestId!)}
+                              >
+                                {leaveState?.pending ? uiText.processing : uiText.approveLeave}
+                              </button>
+                              <button
+                                type="button"
+                                className="notification-mark"
+                                disabled={leaveState?.pending}
+                                onClick={() =>
+                                  setCalendarLeaveState((prev) => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      pending: false,
+                                      decision: null,
+                                      response: null,
+                                      error: null,
+                                      denyOpen: true,
+                                      reason: prev[item.id]?.reason ?? '',
+                                      regeneratePending: false,
+                                      regenerateResult: null,
+                                    },
+                                  }))
+                                }
+                              >
+                                {uiText.denyLeave}
+                              </button>
+                            </div>
+                          )
+                        ) : isAbsenceNotification && !ackState?.result ? (
                           <button
                             type="button"
                             className="notification-acknowledge"
