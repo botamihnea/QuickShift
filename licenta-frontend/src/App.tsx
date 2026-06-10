@@ -7,6 +7,7 @@ import EmployeesPage from './pages/EmployeesPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import ManageShiftsPage from './pages/ManageShiftsPage'
 import MyShiftsPage from './pages/MyShiftsPage'
 import NotificationsPage from './pages/NotificationsPage'
 import RegisterPage from './pages/RegisterPage'
@@ -50,6 +51,7 @@ function App() {
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/admin/stores" element={<StoreManagementPage />} />
         <Route path="/employees" element={<EmployeesPage />} />
+        <Route path="/manage-shifts" element={<ManageShiftsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/my-shifts" element={<MyShiftsPage />} />
       </Route>

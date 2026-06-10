@@ -108,6 +108,31 @@
   font-size: 0.8rem;
 }
 
+.notification-reason {
+  margin: 0.35rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notification-reason-toggle {
+  border: 0;
+  background: none;
+  color: var(--brand-dark);
+  font: 700 0.75rem/1 var(--font-ui);
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.notification-reason-toggle:hover {
+  text-decoration: underline;
+}
+
+.notification-reason-text {
+  color: var(--ink-subtle);
+  font-size: 0.82rem;
+}
+
 .notification-read {
   align-self: center;
   color: var(--ink-subtle);

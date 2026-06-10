@@ -10,7 +10,15 @@ import {
   Views,
 } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { generateNextMonthShifts, generateScheduleForMonth, getAllShifts, acknowledgeAbsence } from '../api/shiftService'
+import {
+  acknowledgeAbsence,
+  approveReplacementOffer,
+  denyReplacementOffer,
+  findAnotherReplacement,
+  generateNextMonthShifts,
+  generateScheduleForMonth,
+  getAllShifts,
+} from '../api/shiftService'
 import { approveLeaveRequest, denyLeaveRequest } from '../api/leaveService'
 import { getNotifications, markNotificationRead } from '../api/notificationService'
 import { getStores, updateMyStoreThreshold } from '../api/storeService'
@@ -85,6 +93,9 @@ function getWelcomeName(email?: string | null, role?: string | null): string {
   }
   if (role === 'MANAGER' && email) {
     return email.split('@')[0] || 'Manager'
+  }
+  if (role === 'EMPLOYEE' && email) {
+    return email.split('@')[0] || 'there'
   }
   return 'there'
 }
@@ -179,7 +190,9 @@ function CalendarPage() {
   const navigate = useNavigate()
   const { currentUser, isAdmin, logout } = useAuth()
   const isManager = currentUser?.role === 'MANAGER'
-  const welcomeName = getWelcomeName(currentUser?.email, currentUser?.role)
+  const welcomeName = currentUser?.fullName?.trim()
+    ? currentUser.fullName
+    : getWelcomeName(currentUser?.email, currentUser?.role)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
@@ -206,6 +219,13 @@ function CalendarPage() {
       }
     >
   >({})
+  const [calendarReplacementState, setCalendarReplacementState] = useState<
+    Record<number, { pending: boolean; decision: 'approved' | 'denied' | null; error: string | null }>
+  >({})
+  const [calendarReplacementFindState, setCalendarReplacementFindState] = useState<
+    Record<number, { pending: boolean; result: string | null; error: string | null }>
+  >({})
+  const [calendarReasonOpen, setCalendarReasonOpen] = useState<Record<number, boolean>>({})
   const [thresholdInput, setThresholdInput] = useState('')
   const [thresholdStatus, setThresholdStatus] = useState<string | null>(null)
   const [isThresholdOpen, setIsThresholdOpen] = useState(false)
@@ -222,114 +242,118 @@ function CalendarPage() {
     () =>
       isRomanian
         ? {
-            shiftCalendarTitle: 'Calendar ture',
-            storeView: 'Vizualizare magazin',
-            noStores: 'Nu exista magazine',
-            manageStores: 'Gestionare magazine',
-            employees: 'Angajati',
-            manageMyShifts: 'Gestionare ture',
-            notifications: 'Notificari',
-            updateThreshold: 'Actualizeaza prag',
-            generating: 'Se genereaza...',
-            generateNextMonth: 'Genereaza',
-            generateForMonth: 'Genereaza pentru luna',
-            changePassword: 'Schimba parola',
-            logOut: 'Deconectare',
-            newNotifications: 'Notificari noi',
-            refreshing: 'Se actualizeaza...',
-            refresh: 'Reincarca',
-            noNotifications: 'Nu exista notificari.',
-            replacementAssigned: 'Inlocuitor atribuit',
-            noReplacement: 'Nu s-a gasit inlocuitor — este necesara interventia manuala.',
-            processing: 'Se proceseaza...',
-            acknowledgeReplace: 'Confirmare si inlocuire',
-            approveLeave: 'Aproba concediu',
-            denyLeave: 'Respinge',
-            denialReason: 'Motiv respingere',
-            confirmDeny: 'Confirma respingerea',
-            cancelDeny: 'Renunta',
-            leaveApproved: 'Concediu aprobat',
-            leaveDenied: 'Concediu respins',
-            regenerateMonth: 'Regenereaza luna',
-            regenerating: 'Se regenereaza...',
-            regenerateSuccess: 'Ture regenerate pentru luna respectiva.',
-            regenerateError: 'Nu se pot regenera turele acum.',
-            markRead: 'Marcheaza ca citit',
-            validationNote:
-              'Vizualizare principala pentru validare: ture generate, nume angajati, si eticheta PT clara pentru part-time.',
-            shiftsGeneratedSuffix: 'ture generate.',
-            loadingShifts: 'Se incarca turele...',
-            updateBusyDayTitle: 'Actualizeaza pragul pentru zile aglomerate',
-            updateBusyDayBody:
-              'Seteaza valoarea vanzarilor care declanseaza personal suplimentar pentru magazin.',
-            thresholdPlaceholder: 'ex: 2000',
-            cancel: 'Renunta',
-            save: 'Salveaza',
-            positiveNumber: 'Introdu un numar pozitiv.',
-            thresholdSuccess: 'Pragul a fost actualizat.',
-            thresholdError: 'Nu se poate actualiza pragul acum.',
-            generateError:
-              'Nu se pot genera turele acum. Verifica daca backend-ul ruleaza si incearca din nou.',
-            generateForMonthError: 'Nu se pot genera turele pentru luna selectata. Incearca din nou.',
-            loadShiftsError: 'Nu se pot incarca turele. Verifica daca backend-ul ruleaza.',
-            translateToRomanian: 'Tradu in romana',
-            translateToEnglish: 'Tradu in engleza',
-            storeViewLabel: 'Vizualizare magazin',
-          }
+          shiftCalendarTitle: 'Calendar ture',
+          storeView: 'Vizualizare magazin',
+          noStores: 'Nu exista magazine',
+          manageStores: 'Gestionare magazine',
+          employees: 'Angajati',
+          manageMyShifts: 'Gestionare ture',
+          notifications: 'Notificari',
+          updateThreshold: 'Actualizeaza prag',
+          generating: 'Se genereaza...',
+          generateNextMonth: 'Genereaza',
+          generateForMonth: 'Genereaza pentru luna',
+          changePassword: 'Schimba parola',
+          logOut: 'Deconectare',
+          newNotifications: 'Notificari noi',
+          refreshing: 'Se actualizeaza...',
+          refresh: 'Reincarca',
+          noNotifications: 'Nu exista notificari.',
+          replacementAssigned: 'Inlocuitor atribuit',
+          noReplacement: 'Nu s-a gasit inlocuitor — este necesara interventia manuala.',
+          processing: 'Se proceseaza...',
+          acknowledgeReplace: 'Confirmare si inlocuire',
+          approveLeave: 'Aproba concediu',
+          denyLeave: 'Respinge',
+          denialReason: 'Motiv respingere',
+          seeReason: 'Vezi motivul',
+          hideReason: 'Ascunde motivul',
+          confirmDeny: 'Confirma respingerea',
+          cancelDeny: 'Renunta',
+          leaveApproved: 'Concediu aprobat',
+          leaveDenied: 'Concediu respins',
+          regenerateMonth: 'Regenereaza luna',
+          regenerating: 'Se regenereaza...',
+          regenerateSuccess: 'Ture regenerate pentru luna respectiva.',
+          regenerateError: 'Nu se pot regenera turele acum.',
+          markRead: 'Marcheaza ca citit',
+          validationNote:
+            'Vizualizare principala pentru validare: ture generate, nume angajati, si eticheta PT clara pentru part-time.',
+          shiftsGeneratedSuffix: 'ture generate.',
+          loadingShifts: 'Se incarca turele...',
+          updateBusyDayTitle: 'Actualizeaza pragul pentru zile aglomerate',
+          updateBusyDayBody:
+            'Seteaza valoarea vanzarilor care declanseaza personal suplimentar pentru magazin.',
+          thresholdPlaceholder: 'ex: 2000',
+          cancel: 'Renunta',
+          save: 'Salveaza',
+          positiveNumber: 'Introdu un numar pozitiv.',
+          thresholdSuccess: 'Pragul a fost actualizat.',
+          thresholdError: 'Nu se poate actualiza pragul acum.',
+          generateError:
+            'Nu se pot genera turele acum. Verifica daca backend-ul ruleaza si incearca din nou.',
+          generateForMonthError: 'Nu se pot genera turele pentru luna selectata. Incearca din nou.',
+          loadShiftsError: 'Nu se pot incarca turele. Verifica daca backend-ul ruleaza.',
+          translateToRomanian: 'Tradu in romana',
+          translateToEnglish: 'Tradu in engleza',
+          storeViewLabel: 'Vizualizare magazin',
+        }
         : {
-            shiftCalendarTitle: 'Shift Calendar',
-            storeView: 'Store view',
-            noStores: 'No stores available',
-            manageStores: 'Manage stores',
-            employees: 'Employees',
-            manageMyShifts: 'Manage my shifts',
-            notifications: 'Notifications',
-            updateThreshold: 'Update threshold',
-            generating: 'Generating...',
-            generateNextMonth: 'Generate',
-            generateForMonth: 'Generate for month',
-            changePassword: 'Change password',
-            logOut: 'Log out',
-            newNotifications: 'New notifications',
-            refreshing: 'Refreshing...',
-            refresh: 'Refresh',
-            noNotifications: 'No notifications yet.',
-            replacementAssigned: 'Replacement assigned',
-            noReplacement: 'No replacement found — manual action required.',
-            processing: 'Processing...',
-            acknowledgeReplace: 'Acknowledge & Replace',
-            approveLeave: 'Approve leave',
-            denyLeave: 'Deny',
-            denialReason: 'Denial reason',
-            confirmDeny: 'Confirm deny',
-            cancelDeny: 'Cancel',
-            leaveApproved: 'Leave approved',
-            leaveDenied: 'Leave denied',
-            regenerateMonth: 'Regenerate month',
-            regenerating: 'Regenerating...',
-            regenerateSuccess: 'Shifts regenerated for that month.',
-            regenerateError: 'Could not regenerate shifts right now.',
-            markRead: 'Mark read',
-            validationNote:
-              'Main view for validation: generated shifts, employee names, and clear PT label for part-time entries.',
-            shiftsGeneratedSuffix: 'shifts generated.',
-            loadingShifts: 'Loading shifts...',
-            updateBusyDayTitle: 'Update busy day threshold',
-            updateBusyDayBody: 'Set the sales value that triggers extra staffing for your store.',
-            thresholdPlaceholder: 'e.g. 2000',
-            cancel: 'Cancel',
-            save: 'Save',
-            positiveNumber: 'Please enter a positive number.',
-            thresholdSuccess: 'Threshold updated successfully.',
-            thresholdError: 'Could not update threshold right now.',
-            generateError:
-              'Could not generate shifts right now. Please verify backend is running and try again.',
-            generateForMonthError: 'Could not generate shifts for that month. Please try again.',
-            loadShiftsError: 'Could not load shifts. Please verify backend is running.',
-            translateToRomanian: 'Translate to Romanian',
-            translateToEnglish: 'Translate to English',
-            storeViewLabel: 'Store view',
-          },
+          shiftCalendarTitle: 'Shift Calendar',
+          storeView: 'Store view',
+          noStores: 'No stores available',
+          manageStores: 'Manage stores',
+          employees: 'Employees',
+          manageMyShifts: 'Manage my shifts',
+          notifications: 'Notifications',
+          updateThreshold: 'Update threshold',
+          generating: 'Generating...',
+          generateNextMonth: 'Generate',
+          generateForMonth: 'Generate for month',
+          changePassword: 'Change password',
+          logOut: 'Log out',
+          newNotifications: 'New notifications',
+          refreshing: 'Refreshing...',
+          refresh: 'Refresh',
+          noNotifications: 'No notifications yet.',
+          replacementAssigned: 'Replacement assigned',
+          noReplacement: 'No replacement found — manual action required.',
+          processing: 'Processing...',
+          acknowledgeReplace: 'Acknowledge & Replace',
+          approveLeave: 'Approve leave',
+          denyLeave: 'Deny',
+          denialReason: 'Denial reason',
+          seeReason: 'See reason',
+          hideReason: 'Hide reason',
+          confirmDeny: 'Confirm deny',
+          cancelDeny: 'Cancel',
+          leaveApproved: 'Leave approved',
+          leaveDenied: 'Leave denied',
+          regenerateMonth: 'Regenerate month',
+          regenerating: 'Regenerating...',
+          regenerateSuccess: 'Shifts regenerated for that month.',
+          regenerateError: 'Could not regenerate shifts right now.',
+          markRead: 'Mark read',
+          validationNote:
+            'Main view for validation: generated shifts, employee names, and clear PT label for part-time entries.',
+          shiftsGeneratedSuffix: 'shifts generated.',
+          loadingShifts: 'Loading shifts...',
+          updateBusyDayTitle: 'Update busy day threshold',
+          updateBusyDayBody: 'Set the sales value that triggers extra staffing for your store.',
+          thresholdPlaceholder: 'e.g. 2000',
+          cancel: 'Cancel',
+          save: 'Save',
+          positiveNumber: 'Please enter a positive number.',
+          thresholdSuccess: 'Threshold updated successfully.',
+          thresholdError: 'Could not update threshold right now.',
+          generateError:
+            'Could not generate shifts right now. Please verify backend is running and try again.',
+          generateForMonthError: 'Could not generate shifts for that month. Please try again.',
+          loadShiftsError: 'Could not load shifts. Please verify backend is running.',
+          translateToRomanian: 'Translate to Romanian',
+          translateToEnglish: 'Translate to English',
+          storeViewLabel: 'Store view',
+        },
     [isRomanian],
   )
 
@@ -725,6 +749,67 @@ function CalendarPage() {
     }
   }
 
+  const handleReplacementDecision = async (
+    notificationId: number,
+    offerId: number,
+    decision: 'approved' | 'denied',
+  ) => {
+    setCalendarReplacementState((prev) => ({
+      ...prev,
+      [notificationId]: { pending: true, decision: null, error: null },
+    }))
+
+    try {
+      if (decision === 'approved') {
+        await approveReplacementOffer(offerId)
+      } else {
+        await denyReplacementOffer(offerId)
+      }
+      setCalendarReplacementState((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, decision, error: null },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+      void fetchShifts()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : uiText.regenerateError
+      setCalendarReplacementState((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, decision: null, error: msg },
+      }))
+    }
+  }
+
+  const handleFindAnotherReplacement = async (notificationId: number, absenceRequestId: number) => {
+    setCalendarReplacementFindState((prev) => ({
+      ...prev,
+      [notificationId]: { pending: true, result: null, error: null },
+    }))
+
+    try {
+      const result = await findAnotherReplacement(absenceRequestId)
+      setCalendarReplacementFindState((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result, error: null },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : uiText.regenerateError
+      setCalendarReplacementFindState((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result: null, error: msg },
+      }))
+    }
+  }
+
   const unreadNotifications = notifications.filter((item) => !item.read)
   const canGenerate = isAdmin || isManager
   const thresholdStatusTone = thresholdStatus?.toLowerCase().includes('success') ? 'success' : 'error'
@@ -779,6 +864,15 @@ function CalendarPage() {
               onClick={() => navigate('/employees')}
             >
               {uiText.employees}
+            </button>
+          ) : null}
+          {isManager ? (
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={() => navigate('/manage-shifts')}
+            >
+              Manage shifts
             </button>
           ) : null}
           {currentUser?.role === 'EMPLOYEE' ? (
@@ -910,6 +1004,14 @@ function CalendarPage() {
                     const isAbsenceNotification = item.relatedAbsenceRequestId != null
                     const isLeaveNotification = item.relatedLeaveRequestId != null
                     const leaveState = calendarLeaveState[item.id]
+                    const replacementState = calendarReplacementState[item.id]
+                    const replacementFindState = calendarReplacementFindState[item.id]
+                    const isReplacementOffer = item.relatedReplacementOfferId != null && currentUser?.role === 'EMPLOYEE'
+                    const isReplacementDeclined = item.message.startsWith('[REPLACEMENT DECLINED]')
+                    const isNoReplacement = item.message.startsWith('[NO REPLACEMENT]')
+                    const hasLeaveReason = Boolean(item.relatedLeaveRequestReason?.trim())
+                    const showLeaveReason = Boolean(calendarReasonOpen[item.id])
+                    const showLeaveReasonToggle = isManager && isLeaveNotification && hasLeaveReason
 
                     const handleAck = async () => {
                       if (!item.relatedAbsenceRequestId) return
@@ -947,6 +1049,27 @@ function CalendarPage() {
                             {item.storeName ? `${item.storeName} · ` : ''}
                             {new Date(item.createdAt).toLocaleString()}
                           </p>
+                          {showLeaveReasonToggle ? (
+                            <div className="notification-reason">
+                              <button
+                                type="button"
+                                className="notification-reason-toggle"
+                                onClick={() =>
+                                  setCalendarReasonOpen((prev) => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id],
+                                  }))
+                                }
+                              >
+                                {showLeaveReason ? uiText.hideReason : uiText.seeReason}
+                              </button>
+                              {showLeaveReason ? (
+                                <span className="notification-reason-text">
+                                  Reason: {item.relatedLeaveRequestReason}
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : null}
                           {ackState?.result ? (
                             <p className="notification-ack-result">
                               {ackState.result.replacementFound
@@ -968,6 +1091,15 @@ function CalendarPage() {
                           ) : null}
                           {leaveState?.regenerateResult ? (
                             <p className="notification-ack-result warning">{leaveState.regenerateResult}</p>
+                          ) : null}
+                          {replacementState?.error ? (
+                            <p className="notification-ack-result error">{replacementState.error}</p>
+                          ) : null}
+                          {replacementFindState?.error ? (
+                            <p className="notification-ack-result error">{replacementFindState.error}</p>
+                          ) : null}
+                          {replacementFindState?.result ? (
+                            <p className="notification-ack-result">{replacementFindState.result}</p>
                           ) : null}
                         </div>
                         {leaveState?.decision === 'approved' ? (
@@ -1083,6 +1215,50 @@ function CalendarPage() {
                               </button>
                             </div>
                           )
+                        ) : isReplacementOffer ? (
+                          <div className="notification-action-buttons">
+                            <button
+                              type="button"
+                              className="notification-acknowledge"
+                              disabled={replacementState?.pending}
+                              onClick={() =>
+                                handleReplacementDecision(item.id, item.relatedReplacementOfferId ?? 0, 'approved')
+                              }
+                            >
+                              {replacementState?.pending ? uiText.processing : 'Approve extra shift'}
+                            </button>
+                            <button
+                              type="button"
+                              className="notification-mark"
+                              disabled={replacementState?.pending}
+                              onClick={() =>
+                                handleReplacementDecision(item.id, item.relatedReplacementOfferId ?? 0, 'denied')
+                              }
+                            >
+                              Deny
+                            </button>
+                          </div>
+                        ) : item.relatedAbsenceRequestId && isManager && (isReplacementDeclined || isNoReplacement) ? (
+                          <div className="notification-action-buttons">
+                            <button
+                              type="button"
+                              className="notification-acknowledge"
+                              disabled={replacementFindState?.pending}
+                              onClick={() => handleFindAnotherReplacement(item.id, item.relatedAbsenceRequestId ?? 0)}
+                            >
+                              {replacementFindState?.pending ? uiText.processing : 'Find another replacement'}
+                            </button>
+                            <button
+                              type="button"
+                              className="notification-mark"
+                              onClick={async () => {
+                                await markNotificationRead(item.id)
+                                void loadNotifications()
+                              }}
+                            >
+                              {uiText.markRead}
+                            </button>
+                          </div>
                         ) : isAbsenceNotification && !ackState?.result ? (
                           <button
                             type="button"

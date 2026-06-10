@@ -3,7 +3,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, markNotificationRead } from '../api/notificationService'
 import { approveLeaveRequest, denyLeaveRequest } from '../api/leaveService'
-import { acknowledgeAbsence, generateScheduleForMonth } from '../api/shiftService'
+import {
+  acknowledgeAbsence,
+  approveReplacementOffer,
+  denyReplacementOffer,
+  findAnotherReplacement,
+  generateScheduleForMonth,
+} from '../api/shiftService'
 import { useAuth } from '../auth/useAuth'
 import type { AcknowledgeAbsenceResponse, LeaveRequestResponse, NotificationItem } from '../types'
 import './NotificationsPage.css'
@@ -33,6 +39,13 @@ function NotificationsPage() {
       }
     >
   >({})
+  const [replacementActions, setReplacementActions] = useState<
+    Record<number, { pending: boolean; decision: 'approved' | 'denied' | null; error: string | null }>
+  >({})
+  const [replacementFindActions, setReplacementFindActions] = useState<
+    Record<number, { pending: boolean; result: string | null; error: string | null }>
+  >({})
+  const [reasonOpen, setReasonOpen] = useState<Record<number, boolean>>({})
 
   const resolveYearMonth = (dateValue: string): { year: number; month: number } | null => {
     const parsed = new Date(dateValue)
@@ -290,14 +303,80 @@ function NotificationsPage() {
     }
   }
 
+  const handleReplacementDecision = async (
+    notificationId: number,
+    offerId: number,
+    decision: 'approved' | 'denied',
+  ) => {
+    setReplacementActions((prev) => ({
+      ...prev,
+      [notificationId]: { pending: true, decision: null, error: null },
+    }))
+
+    try {
+      if (decision === 'approved') {
+        await approveReplacementOffer(offerId)
+      } else {
+        await denyReplacementOffer(offerId)
+      }
+      setReplacementActions((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, decision, error: null },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : 'Could not process replacement response. Please try again.'
+      setReplacementActions((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, decision: null, error: msg },
+      }))
+    }
+  }
+
+  const handleFindAnotherReplacement = async (notificationId: number, absenceRequestId: number) => {
+    setReplacementFindActions((prev) => ({
+      ...prev,
+      [notificationId]: { pending: true, result: null, error: null },
+    }))
+
+    try {
+      const result = await findAnotherReplacement(absenceRequestId)
+      setReplacementFindActions((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result, error: null },
+      }))
+      await markNotificationRead(notificationId)
+      void loadNotifications()
+    } catch (error) {
+      const msg =
+        axios.isAxiosError(error) && typeof error.response?.data === 'string'
+          ? error.response.data
+          : 'Could not find another replacement right now.'
+      setReplacementFindActions((prev) => ({
+        ...prev,
+        [notificationId]: { pending: false, result: null, error: msg },
+      }))
+    }
+  }
+
   function renderActionArea(item: NotificationItem) {
     const ackState = acknowledgeResults[item.id]
     const leaveState = leaveActions[item.id]
+    const replacementState = replacementActions[item.id]
+    const replacementFindState = replacementFindActions[item.id]
     const isManager = currentUser?.role === 'MANAGER'
+    const isEmployee = currentUser?.role === 'EMPLOYEE'
     // Show acknowledge button regardless of read-status — manager may have
     // clicked "Mark read" by mistake before the feature was in place
     const isActionable = item.relatedAbsenceRequestId != null && isManager
     const isLeaveActionable = item.relatedLeaveRequestId != null && isManager
+    const isReplacementOffer = item.relatedReplacementOfferId != null && isEmployee
+    const isReplacementDeclined = item.message.startsWith('[REPLACEMENT DECLINED]')
+    const isNoReplacement = item.message.startsWith('[NO REPLACEMENT]')
 
     if (leaveState?.decision === 'approved') {
       return (
@@ -448,6 +527,69 @@ function NotificationsPage() {
       return <span className="ack-result error">{ackState.error}</span>
     }
 
+    if (isReplacementOffer) {
+      return (
+        <div className="leave-action-buttons">
+          <button
+            type="button"
+            className="notification-acknowledge"
+            disabled={replacementState?.pending}
+            onClick={() =>
+              handleReplacementDecision(item.id, item.relatedReplacementOfferId ?? 0, 'approved')
+            }
+          >
+            {replacementState?.pending ? 'Processing...' : 'Approve extra shift'}
+          </button>
+          <button
+            type="button"
+            className="notification-mark"
+            disabled={replacementState?.pending}
+            onClick={() =>
+              handleReplacementDecision(item.id, item.relatedReplacementOfferId ?? 0, 'denied')
+            }
+          >
+            Deny
+          </button>
+          {replacementState?.error ? (
+            <span className="ack-result error">{replacementState.error}</span>
+          ) : null}
+        </div>
+      )
+    }
+
+    if (item.relatedAbsenceRequestId && isManager && (isReplacementDeclined || isNoReplacement)) {
+      return (
+        <div className="leave-action-buttons">
+          <button
+            type="button"
+            className="notification-acknowledge"
+            disabled={replacementFindState?.pending}
+            onClick={() => handleFindAnotherReplacement(item.id, item.relatedAbsenceRequestId ?? 0)}
+          >
+            {replacementFindState?.pending ? 'Processing...' : 'Find another replacement'}
+          </button>
+          {!item.read && (
+            <button
+              type="button"
+              className="notification-mark"
+              onClick={async () => {
+                await markNotificationRead(item.id)
+                void loadNotifications()
+              }}
+            >
+              Mark as read
+            </button>
+          )}
+          {replacementFindState?.error ? (
+            <span className="ack-result error">{replacementFindState.error}</span>
+          ) : null}
+          {replacementFindState?.result ? (
+            <span className="ack-result success">{replacementFindState.result}</span>
+          ) : null}
+        </div>
+      )
+    }
+
     if (isActionable) {
       return (
         <button
@@ -517,21 +659,49 @@ function NotificationsPage() {
           ) : notifications.length === 0 ? (
             <p className="notifications-empty">No notifications yet.</p>
           ) : (
-            notifications.map((item) => (
-              <article
-                key={item.id}
-                className={item.read ? 'notification-card' : 'notification-card unread'}
-              >
-                <div>
-                  <p className="notification-message">{item.message}</p>
-                  <p className="notification-meta">
-                    {item.storeName ? `${item.storeName} · ` : ''}
-                    {new Date(item.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                {renderActionArea(item)}
-              </article>
-            ))
+            notifications.map((item) => {
+              const isManager = currentUser?.role === 'MANAGER'
+              const hasLeaveReason = Boolean(item.relatedLeaveRequestReason?.trim())
+              const showLeaveReason = Boolean(reasonOpen[item.id])
+              const showLeaveReasonToggle = isManager && item.relatedLeaveRequestId != null && hasLeaveReason
+
+              return (
+                <article
+                  key={item.id}
+                  className={item.read ? 'notification-card' : 'notification-card unread'}
+                >
+                  <div>
+                    <p className="notification-message">{item.message}</p>
+                    <p className="notification-meta">
+                      {item.storeName ? `${item.storeName} · ` : ''}
+                      {new Date(item.createdAt).toLocaleString()}
+                    </p>
+                    {showLeaveReasonToggle ? (
+                      <div className="notification-reason">
+                        <button
+                          type="button"
+                          className="notification-reason-toggle"
+                          onClick={() =>
+                            setReasonOpen((prev) => ({
+                              ...prev,
+                              [item.id]: !prev[item.id],
+                            }))
+                          }
+                        >
+                          {showLeaveReason ? 'Hide reason' : 'See reason'}
+                        </button>
+                        {showLeaveReason ? (
+                          <span className="notification-reason-text">
+                            Reason: {item.relatedLeaveRequestReason}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  {renderActionArea(item)}
+                </article>
+              )
+            })
           )}
         </div>
       </section>

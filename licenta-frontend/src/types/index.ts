@@ -23,6 +23,7 @@ export type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE'
 export type AuthenticatedUser = {
   email: string
   role: UserRole
+  fullName: string | null
   storeId: number | null
   storeName: string | null
 }
@@ -71,6 +72,9 @@ export type NotificationItem = {
   storeName: string | null
   relatedAbsenceRequestId: number | null
   relatedLeaveRequestId: number | null
+  relatedReplacementOfferId: number | null
+  relatedAbsenceRequestReason: string | null
+  relatedLeaveRequestReason: string | null
 }
 
 export type CreateStoreRequest = {
@@ -126,6 +130,20 @@ export type ShiftCalendarEvent = Event & {
     timeRange: string
     status: 'SCHEDULED' | 'ABSENT' | 'REPLACEMENT'
   }
+}
+
+export type EligibleEmployee = {
+  id: number
+  fullName: string
+  contractType: 'FULL_TIME_8H' | 'PART_TIME_6H' | 'PART_TIME_4H'
+  shiftPreference: 'MORNING' | 'EVENING' | 'ANY'
+}
+
+export type ManualShiftRequest = {
+  date: string
+  shiftType: string
+  employeeId: number
+  storeId?: number | null
 }
 
 export type AbsenceReportRequest = {

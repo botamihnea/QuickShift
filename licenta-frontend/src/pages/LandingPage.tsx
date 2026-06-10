@@ -68,7 +68,7 @@ function LandingPage() {
     () =>
       isRomanian
         ? {
-            eyebrow: 'Orchestrare forta de munca enterprise',
+            eyebrow: 'Orchestrarea fortei de munca enterprise',
             themeToggleLight: 'Mod intunecat',
             themeToggleDark: 'Mod luminos',
             translateToRomanian: 'Tradu in romana',
