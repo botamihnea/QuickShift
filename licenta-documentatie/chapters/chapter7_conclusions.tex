@@ -1,0 +1,64 @@
+\chapter{Conclusions}
+\label{conclusions}
+
+\par This thesis set out to design and implement an automated workforce scheduling platform for small to medium retail businesses, with a particular focus on replacing manual, error-prone scheduling with a system that is legally compliant, operationally aware, and usable by non-technical managers.\par QuickShift demonstrates that a carefully engineered, domain-aware scheduling platform can significantly reduce managerial overhead while preserving legal compliance and operational continuity. The combination of a fast heuristic scheduler, a structured absence replacement chain, a leave management workflow, manual override capabilities, and a secure multi-tenant architecture delivers a system that addresses the full complexity of retail workforce management rather than solving only the trivial version of the problem.
+
+\par The project also demonstrates the value of treating domain knowledge as a first-class input to system design. The constraint model, the coverage scaling rules, the leave deductible calculation, and the replacement eligibility criteria were all derived from the operational practices of real retail businesses, not from abstract scheduling theory. This grounding in domain reality is, in this author's view, what distinguishes a useful system from a merely technically correct one.
+
+%-----------------------------------------------------------
+\section{Summary of Achieved Outcomes}
+%-----------------------------------------------------------
+\par The implementation successfully addresses every objective defined in the problem statement:
+
+\begin{enumerate}
+    \item \textbf{Automated schedule generation}: the greedy heuristic scheduler produces legally compliant monthly schedules in a fraction of a second, respecting hard constraints (consecutive-day limits, weekly hour caps, approved leave) while honoring employee shift preferences and balancing monthly working hours as a secondary optimization target.
+    \item \textbf{Forecast-driven coverage}: staffing levels dynamically reflect business signals — weekend peaks, merchandise reception days, projected sales thresholds — without requiring managers to manually adjust templates for each scenario.
+    \item \textbf{Leave request workflow}: employees can submit structured leave requests within the allowed window, and managers can approve or deny them with optional reasons. Approval automatically updates the schedule and the employee's leave balance, and the shift schedule will not take into consideration the employee on leave during generation.
+    \item \textbf{Absence replacement workflow}: when an employee reports an absence, the system notifies the manager, acknowledges the request with a single click, automatically identifies the best available substitute using the same constraint engine as the scheduler, and presents a replacement offer to the candidate. The offer chain continues through denials until coverage is found or the pool is exhausted.
+    \item \textbf{Manual shift management}: managers can add or remove individual shifts with the same constraint enforcement that governs automatic scheduling, and employees receive notifications of each change.
+    \item \textbf{Multi-tenant isolation}: the system supports multiple stores within a single deployment, with strict query-level data separation that prevents any user from accessing data outside their authorized scope.
+    \item \textbf{RBAC}: the system implements role-based access control for employees, managers, and administrators, ensuring that each user group is provided with appropriate pages and actions according to its assigned permissions.
+    
+    \item \textbf{Secure account lifecycle}: password hashing, time-limited recovery tokens, and administrator-controlled manager provisioning collectively ensure that credentials are handled safely throughout the account lifecycle.
+\end{enumerate}
+
+%-----------------------------------------------------------
+\section{Operational Impact}
+%-----------------------------------------------------------
+\par The platform fundamentally changes the nature of the scheduling task for store managers. Before automation, generating a monthly schedule for a team of five to ten employees could take thirty minutes to an hour, and required the manager to manually check legal constraints, balance hours, and identify available employees for each day. With QuickShift, the initial generation is a single button click, and the result is produced in under two seconds, which means it optimises the whole process by over 99\% .
+
+\par The structured absence and replacement workflows reduce the operational risk of last-minute absences. Rather than relying on informal communication (phone calls, text messages), the manager has a complete, timestamped record of every absence report, replacement offer, and decision. This makes the schedule audit trail transparent and reduces disputes about who was or was not notified.
+
+\par The leave balance tracking and deductible day calculation remove a common source of administrative error. Manually tracking remaining leave days in a spreadsheet and applying the correct working-day conversion is error-prone; automating this in the system reduces both administrative overhead and the likelihood of discrepancies between the system record and the employee's understanding of their balance.
+
+%-----------------------------------------------------------
+\section{Future Work}
+%-----------------------------------------------------------
+\par Several extensions to the current platform would increase its operational value:
+
+\begin{itemize}
+    \item \textbf{Advanced optimization}: replacing the greedy heuristic with a metaheuristic such as simulated annealing, or with a mixed-integer programming formulation, would allow the system to optimize secondary objectives such as weekend fairness or preference satisfaction rates in a principled way, at the cost of longer generation time.
+    \item \textbf{KPI dashboard}: a reporting module showing coverage rate by day, average hours per employee per month, absence frequency by employee, and replacement success rate would give managers operational visibility that is currently not available in the system.
+    \item \textbf{Mobile-first shift confirmation}: a lightweight mobile view with push notification support would allow employees to confirm shift assignments and respond to replacement offers without navigating to a desktop browser.
+    \item \textbf{Forecast import from integrations}: rather than relying on manually maintained CSV/Excel files, integrating with point-of-sale systems to ingest real historical sales data and projected trends would reduce the manual data maintenance burden and improve forecast accuracy.
+\end{itemize}
+
+%-----------------------------------------------------------
+\section{Development Challenges}
+%-----------------------------------------------------------
+\par Developing QuickShift from an initial concept to a working, multi-feature platform was a process that required balancing theoretical knowledge from the curriculum with the practical demands of building software that must handle real-world messiness: inconsistent data, partially completed workflows, user actions that arrive out of expected order.
+
+\par The most technically challenging aspect was the replacement algorithm. Initially, I considered using a simplified eligibility check based only on the employee's accumulated hours at the time of the absence. I quickly realized that this would produce incorrect results for employees who were at the start of a new ISO week, since weekly hours reset on Mondays and the naive accumulation would not reflect the correct current state. Implementing the full monthly replay from the database resolved this correctly and made the replacement logic consistent with the main scheduler, at the cost of a more complex implementation.
+
+\par The multi-step notification workflows — particularly the replacement chain with its offer-denial-retry cycle — also required careful state design. The early prototype handled each step as an independent notification, which made it difficult for the manager to track the progress of a single absence event across multiple notifications. Refactoring to carry the absence request ID through all related notifications, and using the frontend to group and contextualize them, produced a significantly cleaner user experience.
+
+\par On the security side, the foreign key constraint failure during schedule regeneration (which arose because replacement offers referenced absence requests that referenced shifts that were being deleted) was an instructive reminder that transactional integrity cannot be taken for granted when domain entities form multi-level dependency graphs. The fix required understanding the exact dependency order and implementing the cleanup in the correct sequence in application code, since relying solely on database cascades would have made the behavior less visible.
+
+\par Overall, the project reinforced my belief that good software is not just about algorithm correctness: it is equally about the operational design of the workflows that surround the algorithm, the security model that governs access to the data those workflows produce, and the interface design that makes the whole system usable by the people who depend on it in real situations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{QuickShiftLogo.png}
+    \caption{QuickShift official logo}
+    \label{fig:placeholder}
+\end{figure}

@@ -1,0 +1,120 @@
+\chapter{Introduction}
+\label{intro}
+
+\section{Why I Chose to Create Quickshift}
+
+\label{sec:why_quickshift}
+The motivation behind developing \textbf{Quickshift} stems from the direct observation of operational inefficiencies and administrative friction in shift-based industries, particularly small-to-medium enterprises (SMEs) operating in dynamic environments like retail and the floral industry. In these sectors, workforce management is traditionally treated as a secondary administrative task, yet it directly impacts employee well-being, labor law compliance, and overall business profitability. 
+Most existing workforce scheduling solutions on the market are designed as rigid, "one-size-fits-all" enterprise platforms. They often require expensive subscriptions, complex configuration setups, and offer very little flexibility for localized business constraints. Furthermore, these platforms are primarily \emph{reactive}; while they allow managers to manually swap shifts or send broadcast alerts when a shift is dropped, they fail to automate the decision-making process during unforeseen operational disruptions, such as sudden employee absences or last-minute leave requests. Managers are thus left to manually resolve schedule conflicts under pressure, frequently resulting in suboptimal staffing, unfair shift distribution, and employee burnout.
+Quickshift was created to bridge this critical gap by introducing a data-driven, proactive, and accessible Software-as-a-Service (SaaS) solution. By combining demand forecasting with constraint satisfaction principles, the system is designed to be highly beneficial in the following real-world scenarios:
+
+\begin{itemize}
+    \item \textbf{Dynamic retail environments with fluctuating demand:} In businesses such as flower shops or boutique stores, customer traffic varies significantly depending on seasonality, holidays (e.g., Valentine's Day, Mother's Day), and delivery days. Quickshift automates shift generation by directly ingesting sales forecasts and delivery schedules, ensuring that stores are optimally staffed during peak hours while avoiding costly overstaffing during slower periods.
+    
+    \item \textbf{Proactive conflict resolution and absence management:} When an employee requests unexpected time off or reports sick, the manager is typically forced to call or message multiple staff members to find a replacement. Quickshift solves this through its intelligent \texttt{findBestCandidate} algorithm. The system automatically scans the database and evaluates candidates based on contractual limitations, worked hours, and shift preferences, instantly suggesting the most appropriate and compliant replacement.
+    
+    \item \textbf{Ensuring compliance and fairness:} In manual scheduling, it is extremely difficult for a manager to track and balance every employee's contractual hours (e.g., distinguishing between 4-hour, 6-hour, and 8-hour contracts) while enforcing legal rest periods. Quickshift automatically integrates these business rules into its core scheduling logic, ensuring fair shift distribution, preventing employee fatigue, and guaranteeing strict adherence to labor regulations.
+    
+    \item \textbf{Multi-tenant accessibility for growing franchises:} For business owners managing multiple independent store branches, Quickshift acts as a unified SaaS platform. It provides complete data isolation through context-aware security schemas, allowing managers at different locations to configure localized rules, track their respective sales forecasts, and generate independent work schedules within a single secure ecosystem.
+\end{itemize}
+
+
+
+\section{Objectives of the Application}
+
+This section summarizes the intended objectives of the application from a project planning perspective. The goals are stated as design targets, independent of the final implementation details.
+
+\begin{enumerate}
+    \item Provide a scheduling workflow that generates monthly shift plans from store-specific forecasts and staffing rules.
+    \item Split working hours as evenly as possible to reduce employee exhaustion and maximize productivity.
+    \item Enforce contractual constraints (hours, contract type, shift preferences) and legal limits during schedule creation.
+    \item Implement a \textbf{proactive approach} when it comes to both unplanned absences and planned leave requests, automatically proposing the best replacement candidate based on several filters such as shift preference and worked hours, leaving the manager with manual work only for rare exceptional cases.
+    \item Offer role-based access for employees, managers, and administrators, each with tailored pages and actions depending on their security permissions.
+    \item Ensure data isolation per store while allowing administrators to manage multiple stores in the same system seamlessly.
+    \item Deliver a predictable notification system for operational events (requests, approvals, replacements) so actions are traceable.
+    \item Implement logging and tests for easy maintenance and long-term use.
+\end{enumerate}
+
+
+\section{Personal Contributions and Originality}
+
+The main \textbf{originality} of this work lies in translating highly specific, real-world business constraints into a scalable algorithmic solution. Unlike generic scheduling tools, the proposed system introduces: 
+
+\begin{itemize}
+    \item a custom parsing mechanism for sales forecasts
+    \item intelligent adjustment of staffing levels according to dynamic daily requirements, such as high revenue targets or physical merchandise reception.
+    \item support absences and leave requests through an automated flow with clear outcomes and minimal manual intervention.
+\end{itemize}
+
+Furthermore, the algorithm is tailored to adhere to strict work norms and contractual limits provided as input (e.g., maximum working hours, full-time versus part-time constraints), thereby ensuring that the generated schedules are not only optimal for business operations but also fully compliant with labor regulations.
+
+A significant personal contribution is the architectural decision to completely avoid hardcoded logic. Instead, the system relies on a dynamic, database-driven design based on clearly defined Entities and Data Transfer Objects (DTOs). This approach ensures a high level of adaptability, allowing non-technical managers to manage business rules efficiently \emph{without requiring modifications to the source code}.
+
+Adding to its distinct value, the application is engineered with a \textbf{multi-tenant capability}, moving beyond a single-store utility. It can be seamlessly adopted by multiple users across different branches or independent businesses. By simply registering for a secure account, each manager gains access to an \emph{isolated, personalized workspace} where they can effortlessly:
+\begin{enumerate}
+    \item oversee their specific store
+    \item upload local forecasts
+    \item generate independent employee schedules
+    \item acknowledge and replace employees that have an emergency automatically
+    \item manually add or delete shifts
+    \item receive notifications for every important event
+    \item update the store's threshold for busy days
+    \item manage their account's password and details
+\end{enumerate}
+effectively transforming the project into a robust \textbf{Software-as-a-Service (SaaS) platform}. \cite{SaaSArchitecture}.
+
+\section{Thesis Structure}
+
+This thesis is organized into seven main chapters, each progressively presenting the theoretical context, the system architecture, and the implementation of the proposed solution.
+
+
+
+\setlength{\leftmargin}{0pt}
+\setlength{\itemsep}{0.6em}
+\setlength{\parskip}{0pt}
+
+\noindent\textbf{\large {Chapter 1 -- Introduction and Problem Definition}} \\[0.3em]
+\noindent Introduces the problem statement, highlighting the limitations of traditional, manual scheduling approaches and outlining the main objectives of the proposed software solution.
+Furthermore, this chapter establishes the originality of the project, clearly defining the unique value proposition it brings to the customer by automating a highly tedious administrative task and significantly \textbf{reducing operational overhead}.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 2 -- Theoretical Background and Market Analysis}} \\[0.3em]
+\noindent Explores the theoretical background, presenting the concepts behind \textbf{Constraint Satisfaction Problems (CSP)} and the modern software architectures utilized throughout the project.
+In addition, it provides a thorough market analysis of existing commercial solutions.
+By dissecting their specific client bases and identifying potential operational bottlenecks or overly complex workflows in these platforms, this chapter draws valuable inspiration for developing a more robust, intuitive, and highly refined alternative.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 3 -- System Architecture}} \\[0.3em]
+\noindent Describes the system architecture, emphasizing the transition from a conceptual design to a robust backend implemented in Java using the Spring Boot framework, integrated with a relational database through Spring Data JPA. \\
+Particular emphasis is placed on the database design, detailing its entity relationships and its scalable expansion model, which is engineered to accommodate future modules without disrupting existing data integrity.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 4 -- Algorithm Implementation}} \\[0.3em]
+\noindent Represents the core of the thesis and details the implementation of the scheduling algorithm.
+This chapter explains how the system dynamically processes external data (such as CSV/Excel sales forecasts and the merchandise reception schedule) and applies strict business logic to generate optimized work shifts.
+Crucially, it highlights how the system empowers users to seamlessly define and adjust these business boundaries from the interface, ensuring the application easily adapts to the constant evolution and scaling of their store.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 5 -- Security and Data Protection}} \\[0.3em]
+\noindent Focuses on the robust security infrastructure inherent to the Spring Boot ecosystem.
+It explains how personal and sensitive data is shielded from public access, ensuring user privacy.
+The chapter details the implementation of enterprise-grade security techniques—such as encrypted passwords and secure token-based authentication — making the individually created manager accounts highly resilient against unauthorized access or data breaches.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 6 -- Front-end implementation and design}} \\[0.3em]
+\noindent Details the development of the client-side application, built using React.
+It highlights the focus on creating an accessible, modern, and visually appealing user interface.
+The styling and user experience (UX) are specifically tailored for non-technical users, ensuring that store managers can easily authenticate, tweak business rules, visualize generated schedules and man y more without requiring any prior IT expertise.
+
+\vspace{1.5em}
+
+\noindent\textbf{\large {Chapter 7 -- Conclusions and Evaluation}} \\[0.3em]
+\noindent Presents the conclusions, focusing on the application features and its long-term maintainability.
+It explains how the flexible codebase allows for effortless future updates.
+Finally, it outlines the strategy for benchmarking the system's performance and utility against major market competitors.
+

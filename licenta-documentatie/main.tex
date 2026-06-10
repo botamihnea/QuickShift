@@ -1,0 +1,76 @@
+%\documentclass[12pt]{scrreprt}
+\documentclass[12pt]{report} 
+
+% language may be romanian or english (default is english)
+% type may be bachelor or master (default is bachelor)
+\usepackage[language=romanian, type=bachelor]{style}
+
+\usepackage{subcaption} %so we can do subfigures
+
+\usepackage{float} %so that we have the H option available
+
+%\geometry{a4paper,top=2.5cm,left=3cm,right=2.5cm,bottom=2.5cm}
+%in style
+%controlling the appearance of your headers and footers
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\renewcommand{\headrulewidth}{0.2pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+\begin{document}
+
+\specialization{Computer Science in English}	
+\title{Quick Shift}					   
+\author{Bota Mihnea Catalin}											
+\supervisor{Dr. MURESAN Horea, Lector Universitar}				
+				
+\maketitle
+
+
+\pagenumbering{roman} 
+
+\cleardoublepage
+\section*{Abstract}
+\vspace{0.5cm}	
+\hrule
+\vspace{0.5cm}
+
+The efficient management of human resources in \textbf{dynamic retail environments}, particularly within specialized sectors such as the \emph{floral industry}, represents a highly complex operational challenge. In such volatile markets, customer foot traffic and sales volumes fluctuate dramatically based on seasonality, holidays, and daily operational events. Consequently, aligning workforce capacity with actual business demand is not merely a routine administrative task, but a \textbf{critical strategic objective} that directly impacts both \emph{operational costs} and \emph{employee satisfaction} \cite{RetailIncomeScheduling}. 
+
+When a retail store is \textbf{understaffed} during peak hours or on days requiring high-volume merchandise reception, the immediate results are compromised customer service, lost revenue opportunities, and severe employee fatigue. Conversely, \textbf{overstaffing} during low-traffic periods leads to unnecessary financial losses, directly eroding the profit margins of small to medium-sized enterprises (SMEs).
+
+Traditionally, store managers have relied on \emph{manual scheduling techniques}—often using basic spreadsheets, pen-and-paper methods, or intuition-based guesswork. This outdated approach is fundamentally flawed in modern retail: it is time-consuming, prone to human error, and incapable of simultaneously balancing multiple, conflicting variables. Aligning daily sales forecasts, labor laws, employee availability, contract types, and operational constraints manually introduces bias and errors. As businesses scale, generating legally compliant, economically optimized schedules manually becomes unsustainable.
+
+To resolve this critical bottleneck, this thesis presents the design, architecture, and implementation of a custom, automated \textbf{Employee Scheduling System}. Developed to replace inefficient manual rostering, the system introduces an \emph{intelligent, data-driven approach} \cite{RetailIncomeScheduling}. By seamlessly ingesting external data streams—such as CSV-based demand forecasts and inventory delivery schedules—the algorithm dynamically calculates the precise staffing requirements for any given day. Rather than relying on rigid templates, the system intelligently allocates human resources to ensure staff are deployed exactly when and where they are most valuable.
+
+Furthermore, the project transcends a simple algorithm by encapsulating the core logic within a modern, production-grade \textbf{Software-as-a-Service (SaaS) architecture}. Built upon a robust Java Spring Boot backend and designed for eventual integration with a React frontend, the platform empowers non-technical managers to orchestrate staff, adjust dynamic business constraints, and maintain complete operational oversight in a secure, multi-tenant environment.
+
+
+
+
+\tableofcontents
+
+
+\newpage
+\pagenumbering{arabic}
+
+\input{chapters/chapter1_introduction}
+%\addcontentsline{toc}{chapter}{Introducere}
+%\addcontentsline{toc}{chapter}{Introduction}
+
+\input{chapters/chapter2}
+\input{chapters/chapter3}
+\input{chapters/chapter4}
+\input{chapters/chapter5}
+\input{chapters/chapter6}
+
+
+\input{chapters/chapter7_conclusions}
+%\addcontentsline{toc}{chapter}{Concluzii}
+%\addcontentsline{toc}{chapter}{Conclusions}
+
+\bibliography{references}
+
+\end{document}
