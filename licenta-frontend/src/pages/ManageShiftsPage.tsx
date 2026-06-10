@@ -99,7 +99,7 @@ function ManageShiftsPage() {
         : Array.isArray(shift.shiftDate)
           ? `${shift.shiftDate[0]}-${String(shift.shiftDate[1]).padStart(2, '0')}-${String(shift.shiftDate[2]).padStart(2, '0')}`
           : `${shift.shiftDate.year}-${String(shift.shiftDate.month).padStart(2, '0')}-${String(shift.shiftDate.day).padStart(2, '0')}`
-      return date === selectedDate
+      return date === selectedDate && shift.status != "ABSENT"
     })
   }, [selectedDate, shifts])
 
