@@ -13,7 +13,7 @@
 \par Authentication state is managed through a custom \texttt{useAuth} hook backed by React context. The hook exposes the current user, authentication flags, and helpers to store or clear the JWT. Login flows call the API and then store the received token via the context helper, while logout clears storage and auth state; routing logic then redirects unauthenticated users to the public pages. Components consume the hook to conditionally render content based on the user’s role and authentication status.
 
 %-----------------------------------------------------------
-\section{Routing and Route Protection}
+\subsection{Routing and Route Protection}
 %-----------------------------------------------------------
 \par Client-side routing is handled by React Router v6. The route configuration is centralized in the main application component, with a \texttt{ProtectedRoute} wrapper component that checks the current authentication state before rendering the target page. Unauthenticated users attempting to access protected routes are redirected to the login page; authenticated users attempting to access the login or registration pages are redirected to the schedule page.
 
@@ -35,13 +35,13 @@
     \label{fig:placeholder}
 \end{figure}
 
-\subsubsection*{Manual Shift Addition}
+\subsubsection*{Manual shift addition}
 
 \par Managers can add individual shifts by clicking on the \texttt{Manage Shifts} button and selecting a date for the shift. The form first fetches the list of eligible employees for the selected date and shift type from the backend, populating the employee selector with only valid choices. This server-driven eligibility check ensures that the constraint logic described in Chapter 4 is enforced at the point of selection rather than only at submission time, which reduces the likelihood of a rejected submission and provides clearer guidance to the manager.
 
 \par After selecting an employee and confirming, the frontend calls the shift creation endpoint and re-renders the relevant calendar cell on success. An error returned by the backend (for example, if the employee becomes ineligible between the time the form was opened and the time of submission) is displayed inline in the form panel.
 
-\subsubsection*{Shift Deletion}
+\subsubsection*{Shift deletion}
 
 \par Managers can delete a shift by clicking on the remove action from the same \texttt{Manage Shifts} menu. There, all the scheduled shifts for the selected date, alongside the addition option, can be viewed. The delete endpoint is called and the card is removed from the calendar grid on success. A confirmation step is deliberately omitted to keep the interaction smooth (if the manager manually updated that shift, it is necessary to respect it); instead, the employee receives an automatic \texttt{[SHIFT REMOVED]} notification via the system, which serves as a record of the change.
 
@@ -75,37 +75,21 @@
 
 \par The key design challenge of the notifications page is that different notification types require fundamentally different action controls, and the state of those controls must be maintained as the user interacts with them without causing the entire list to re-fetch on every action. This is solved by maintaining per-notification action state in three separate state maps within the page component: one for acknowledgment actions (absence requests), one for leave decisions, and one for replacement offer actions. Each map is keyed by notification ID, so updates to one notification do not disturb the display state of others.
 
-\subsubsection*{Absence Acknowledgment}
+\subsubsection*{Absence acknowledgment}
 
 \par Notifications prefixed with \texttt{[ABSENCE REQUEST]} render an \emph{Acknowledge \& Replace} button. Clicking it calls the acknowledgment endpoint and updates the notification's local state to show a result message: either a success message naming the replacement employee, or a warning if no replacement was found. In the success case, the shift proposal is sent through a notification to that employee, and if they accept, a follow-up notification is sent to the manager with the person that accepted the shift.
 
-\subsubsection*{Leave Request Decisions}
+\subsubsection*{Leave request decisions}
 
 \par Notifications prefixed with \texttt{[LEAVE REQUEST]} render two buttons: \emph{Approve leave} and \emph{Deny}. The deny flow opens an inline panel in which the manager can enter an optional reason before confirming. In the approved state, the notification transitions to a success message and the employee also receives a confirmation of the leave request being approved. The amount of leave days remaining in the employee's balance is deducted immediately, and upon generation of the month in which the leave was requested, the employee will not be considered for any shifts in the requested period.
 
-\subsubsection*{Replacement Offer Acceptance and Denial}
+\subsubsection*{Replacement offer acceptance and denial}
 
 \par Notifications prefixed with \texttt{[REPLACEMENT OFFER]} are received by employees and render \emph{Approve extra shift} and \emph{Deny} buttons. Clicking either button calls the corresponding endpoint and marks the notification as read. The system then handles the downstream consequences (creating the replacement shift on acceptance, or triggering the next automated search on denial) server-side, and the manager receives a follow-up notification reflecting the outcome.
 
-\subsubsection*{No Replacement Alerts}
+\subsubsection*{No replacement alerts}
 
 \par Notifications prefixed with \texttt{[NO REPLACEMENT]} are received by managers when no eligible replacement could be found for an absent shift. These notifications render a \emph{Find another replacement} button, which triggers a new automated search from the current state of the employee pool (potentially with different constraint states compared to when the original search ran). They also render a \emph{Mark as read} button so that managers can dismiss the alert after arranging a manual resolution outside the system. This dismissal path is essential for the system to remain usable when all automated options have been exhausted.
-
-%-----------------------------------------------------------
-\section{Store Management and Administrator Interface}
-%-----------------------------------------------------------
-\par The store management page is accessible only to administrators. It provides a tabbed interface covering three areas: store creation, employee listing with store assignment, and manager provisioning.
-
-\par Store creation requires a store name, a location identifier and a busy day threshold - which can then be updated by the managers depending on the stores' sales. After creation, the store appears immediately in the store selector used throughout the application. The administrator can then assign a manager to the store through the provisioning form, which requires an email address and the target store. The provisioning action creates the manager account, sends the onboarding email, and links the account to the selected store in a single operation.
-
-\par The employee listing shows all registered employees grouped by store, with their contract type, shift preference, and current leave day balance visible.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{ManageStores.png}
-    \caption{Manage stores page overview}
-    \label{fig:placeholder}
-\end{figure}
 
 %-----------------------------------------------------------
 \section{Authentication Pages and Account Recovery}
@@ -130,6 +114,22 @@
 \end{itemize}
 
 \par Role-specific UI is handled within the components themselves: they read the user role from \texttt{useAuth} and conditionally render controls (e.g., manager-only actions) as needed, while routing primarily gates access based on authentication status rather than role-based route splits.\cite{fireactUseAuth}
+
+%-----------------------------------------------------------
+\subsection{Store Management and Administrator Interface}
+%-----------------------------------------------------------
+\par The store management page is accessible only to administrators. It provides a tabbed interface covering three areas: store creation, employee listing with store assignment, and manager provisioning.
+
+\par Store creation requires a store name, a location identifier and a busy day threshold - which can then be updated by the managers depending on the stores' sales. After creation, the store appears immediately in the store selector used throughout the application. The administrator can then assign a manager to the store through the provisioning form, which requires an email address and the target store. The provisioning action creates the manager account, sends the onboarding email, and links the account to the selected store in a single operation.
+
+\par The employee listing shows all registered employees grouped by store, with their contract type, shift preference, and current leave day balance visible.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{ManageStores.png}
+    \caption{Manage stores page overview}
+    \label{fig:placeholder}
+\end{figure}
 
 %-----------------------------------------------------------
 \section{Client-Side State Management Strategy}

@@ -29,13 +29,13 @@ Market & Analysis of existing tools highlighting gaps in flexibility, scalabilit
 \end{figure}.
 
 \section{Theoretical Frameworks in Software Architecture}
-\subsection{Constraint Satisfaction Problems in Automated Scheduling}
+\subsection{Constraint satisfaction problems in automated scheduling}
 
 The foundation of modern algorithmic scheduling lies in the field of artificial intelligence and operations research, specifically within the domain of Constraint Satisfaction Problems (CSP). A CSP is defined mathematically by a set of variables (e.g., available work shifts), a domain of values for each variable (e.g., the pool of available employees), and a set of constraints that restrict the allowable combinations of values. \cite{Meseguer1989}
 
 In workforce management, these constraints are categorized as either hard or soft. Hard constraints are non-negotiable boundaries, such as legal maximum weekly working hours or mandatory rest periods between shifts. Soft constraints represent operational preferences, such as an employee's desire to work morning shifts or a manager's preference to balance out the working hours for each employee. The theoretical challenge—and computational complexity—of automated scheduling systems lies in designing algorithms capable of navigating these multi-dimensional constraints to find an optimal, legally compliant assignment without requiring exponential computational time.
 
-\subsection{Multi-Tenant Software-as-a-Service (SaaS) Paradigms}
+\subsection{Multi-tenant Software-as-a-Service (SaaS) paradigms}
  
 The architectural shift from locally hosted, single-tenant applications to a future cloud-based Software-as-a-Service (SaaS) platforms requires robust Multi-Tenancy models. Multi-tenancy refers to a software architecture in which a single instance of an application serves multiple distinct user groups, or "tenants."\cite{MultiTenantSaaS}
 
@@ -48,14 +48,14 @@ From a theoretical standpoint, multi-tenant data architecture generally falls in
     \label{fig:placeholder}
 \end{figure}
 
-\subsection{Advanced Role-Based Access Control (RBAC) and Stateless Authentication}
+\subsection{Advanced Role-based Access Control (RBAC) and stateless authentication}
 
 To support secure multi-tenancy, access control mechanisms have evolved significantly. Traditional, stateful session-based authentication has largely been superseded by stateless protocols utilizing JSON Web Tokens (JWT).
 
 While basic Role-Based Access Control (RBAC) relies on checking a user's assigned role against a requested endpoint (e.g., validating if a user has "ADMIN" privileges), enterprise-grade systems require Layer 2 Data-Level RBAC. In this theoretical model, access control is not merely a gatekeeper at the application's edge; rather, the authentication identity is injected directly into the data querying process. This ensures that data retrieval is dynamically scoped to the user's specific organizational context, rendering unauthorized horizontal data access architecturally impossible.\cite{RBAC1}
 
 \section{Market Analysis of Workforce Management Solutions}
-\subsection{Global Market Dynamics and Growth Indicators}
+\subsection{Global market dynamics and growth indicators}
 
 The demand for intelligent workforce management solutions is experiencing rapid and sustained growth, driven by increasing emphasis on operational efficiency and labor compliance. According to recent industry projections, the global Employee Scheduling and Shift Planning Software market is expected to grow from approximately USD 1.89 billion in 2024 to nearly USD 3.94 billion by 2032, representing a Compound Annual Growth Rate (CAGR) of 9.6\%. \cite{SchedulingMarket2024}.\begin{equation}
 \text{CAGR} = \left( \frac{V_{final}}{V_{begin}} \right)^{\frac{1}{t}} - 1
@@ -69,7 +69,7 @@ This expansion is largely fueled by the transition of Small and Medium Enterpris
             ybar,
             bar width=20pt,
             width=14cm,
-            height=6cm,
+            height=5.5cm,
             title={\textbf{Projected Global Employee Scheduling Software Market Size}},
             xlabel={Year},
             ylabel={Market Size (USD Billions)},
@@ -104,7 +104,7 @@ This expansion is largely fueled by the transition of Small and Medium Enterpris
     \label{fig:market_growth_projection}
 \end{figure}
 
-\subsection{Ecosystem of Leading Competitors}
+\subsection{Ecosystem of leading competitors}
 
 The current commercial landscape is dominated by several large-scale SaaS providers, each targeting broad demographics of shift-based industries:
 
@@ -120,7 +120,7 @@ The current commercial landscape is dominated by several large-scale SaaS provid
     
 \end{itemize}
 
-\subsection{Identifying the Architectural and Functional Gap}
+\subsection{Identifying the architectural and functional gap}
 
 Despite the maturity of the previously mentioned platforms, a critical analysis reveals significant structural gaps, particularly regarding niche adaptability and proactive automation for SMEs.
 

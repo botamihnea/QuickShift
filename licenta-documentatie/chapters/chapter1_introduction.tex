@@ -15,7 +15,7 @@ Quickshift was created to bridge this critical gap by introducing a data-driven,
     
     \item \textbf{Ensuring compliance and fairness:} In manual scheduling, it is extremely difficult for a manager to track and balance every employee's contractual hours (e.g., distinguishing between 4-hour, 6-hour, and 8-hour contracts) while enforcing legal rest periods. Quickshift automatically integrates these business rules into its core scheduling logic, ensuring fair shift distribution, preventing employee fatigue, and guaranteeing strict adherence to labor regulations.
     
-    \item \textbf{Multi-tenant accessibility for growing franchises:} For business owners managing multiple independent store branches, Quickshift acts as a unified SaaS platform. It provides complete data isolation through context-aware security schemas, allowing managers at different locations to configure localized rules, track their respective sales forecasts, and generate independent work schedules within a single secure ecosystem.
+    \item \textbf{Multi-tenant accessibility for growing franchises:} For business owners managing multiple independent store branches, Quickshift acts as a unified SaaS platform. It provides complete data isolation, allowing managers at different locations to configure localized rules, track their respective sales forecasts, and generate independent work schedules within a single secure ecosystem.
 \end{itemize}
 
 
@@ -25,7 +25,7 @@ Quickshift was created to bridge this critical gap by introducing a data-driven,
 This section summarizes the intended objectives of the application from a project planning perspective. The goals are stated as design targets, independent of the final implementation details.
 
 \begin{enumerate}
-    \item Provide a scheduling workflow that generates monthly shift plans from store-specific forecasts and staffing rules.
+    \item Provide a scheduling workflow that generates monthly shift plans from parsing store-specific forecasts and staffing rules.
     \item Split working hours as evenly as possible to reduce employee exhaustion and maximize productivity.
     \item Enforce contractual constraints (hours, contract type, shift preferences) and legal limits during schedule creation.
     \item Implement a \textbf{proactive approach} when it comes to both unplanned absences and planned leave requests, automatically proposing the best replacement candidate based on several filters such as shift preference and worked hours, leaving the manager with manual work only for rare exceptional cases.
@@ -38,32 +38,12 @@ This section summarizes the intended objectives of the application from a projec
 
 \section{Personal Contributions and Originality}
 
-The main \textbf{originality} of this work lies in translating highly specific, real-world business constraints into a scalable algorithmic solution. Unlike generic scheduling tools, the proposed system introduces: 
+The main \textbf{originality} of this work lies in translating highly specific, real-world business constraints into a scalable algorithmic solution. Unlike generic scheduling tools, the proposed system bridges the gap between complex constraint satisfaction algorithms and daily retail operations, offering a highly configurable solution wrapped in an intuitive user experience tailored for non-technical store managers. 
+\par Furthermore, the algorithm is tailored to adhere to strict work norms and contractual limits provided as input (e.g., maximum working hours, full-time versus part-time constraints), thereby ensuring that the generated schedules are not only optimal for business operations but also fully compliant with labor regulations.
+\par A significant personal contribution is the architectural decision to completely avoid hardcoded logic. Instead, the system relies on a dynamic, database-driven design based on clearly defined Entities and Data Transfer Objects (DTOs). This approach ensures a high level of adaptability, allowing non-technical managers to manage business rules efficiently without requiring modifications to the source code.
+\par From an engineering perspective, the system's originality is further elevated by its multi-tenant SaaS architecture. Rather than deploying isolated software instances for each client, the platform enforces strict, context-aware data separation within a shared database schema. This design ensures that the dynamic scheduling engine and access control layers scale efficiently as a Software-as-a-Service platform, maintaining absolute data privacy and isolation for independent store branches \cite{SaaSArchitecture}. While most of the others platforms work for a centralized main store, Quickshift easily allows growing businesses to configure multiple headquarters and shops directly from the application.
 
-\begin{itemize}
-    \item a custom parsing mechanism for sales forecasts
-    \item intelligent adjustment of staffing levels according to dynamic daily requirements, such as high revenue targets or physical merchandise reception.
-    \item support absences and leave requests through an automated flow with clear outcomes and minimal manual intervention.
-\end{itemize}
-
-Furthermore, the algorithm is tailored to adhere to strict work norms and contractual limits provided as input (e.g., maximum working hours, full-time versus part-time constraints), thereby ensuring that the generated schedules are not only optimal for business operations but also fully compliant with labor regulations.
-
-A significant personal contribution is the architectural decision to completely avoid hardcoded logic. Instead, the system relies on a dynamic, database-driven design based on clearly defined Entities and Data Transfer Objects (DTOs). This approach ensures a high level of adaptability, allowing non-technical managers to manage business rules efficiently \emph{without requiring modifications to the source code}.
-
-Adding to its distinct value, the application is engineered with a \textbf{multi-tenant capability}, moving beyond a single-store utility. It can be seamlessly adopted by multiple users across different branches or independent businesses. By simply registering for a secure account, each manager gains access to an \emph{isolated, personalized workspace} where they can effortlessly:
-\begin{enumerate}
-    \item oversee their specific store
-    \item upload local forecasts
-    \item generate independent employee schedules
-    \item acknowledge and replace employees that have an emergency automatically
-    \item manually add or delete shifts
-    \item receive notifications for every important event
-    \item update the store's threshold for busy days
-    \item manage their account's password and details
-\end{enumerate}
-effectively transforming the project into a robust \textbf{Software-as-a-Service (SaaS) platform}. \cite{SaaSArchitecture}.
-
-\section{Thesis Structure}
+\section{Thesis structure}
 
 This thesis is organized into seven main chapters, each progressively presenting the theoretical context, the system architecture, and the implementation of the proposed solution.
 
@@ -73,48 +53,77 @@ This thesis is organized into seven main chapters, each progressively presenting
 \setlength{\itemsep}{0.6em}
 \setlength{\parskip}{0pt}
 
-\noindent\textbf{\large {Chapter 1 -- Introduction and Problem Definition}} \\[0.3em]
-\noindent Introduces the problem statement, highlighting the limitations of traditional, manual scheduling approaches and outlining the main objectives of the proposed software solution.
-Furthermore, this chapter establishes the originality of the project, clearly defining the unique value proposition it brings to the customer by automating a highly tedious administrative task and significantly \textbf{reducing operational overhead}.
+% \noindent\textbf{\large {Chapter 1 -- Introduction and Problem Definition}} \\[0.3em]
+\noindent \textbf{Chapter 1} introduces the problem statement, highlighting the limitations of traditional, manual scheduling approaches and outlining the main objectives of the proposed software solution.
+Furthermore, this chapter establishes the originality of the project, clearly defining the unique value proposition it brings to the customer by automating a highly tedious administrative task and reducing operational overhead.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 2 -- Theoretical Background and Market Analysis}} \\[0.3em]
-\noindent Explores the theoretical background, presenting the concepts behind \textbf{Constraint Satisfaction Problems (CSP)} and the modern software architectures utilized throughout the project.
+\noindent\textbf {Chapter 2} explores the theoretical background, presenting the concepts behind \textbf{Constraint Satisfaction Problems (CSP)} and the modern software architectures utilized throughout the project.
 In addition, it provides a thorough market analysis of existing commercial solutions.
 By dissecting their specific client bases and identifying potential operational bottlenecks or overly complex workflows in these platforms, this chapter draws valuable inspiration for developing a more robust, intuitive, and highly refined alternative.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 3 -- System Architecture}} \\[0.3em]
-\noindent Describes the system architecture, emphasizing the transition from a conceptual design to a robust backend implemented in Java using the Spring Boot framework, integrated with a relational database through Spring Data JPA. \\
+\noindent\textbf {Chapter 3} describes the system architecture, emphasizing the transition from a conceptual design to a robust backend implemented in Java using the Spring Boot framework, integrated with a relational database through Spring Data JPA. \\
 Particular emphasis is placed on the database design, detailing its entity relationships and its scalable expansion model, which is engineered to accommodate future modules without disrupting existing data integrity.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 4 -- Algorithm Implementation}} \\[0.3em]
-\noindent Represents the core of the thesis and details the implementation of the scheduling algorithm.
+\noindent\textbf {Chapter 4} represents the core of the thesis and details the implementation of the scheduling algorithm.
 This chapter explains how the system dynamically processes external data (such as CSV/Excel sales forecasts and the merchandise reception schedule) and applies strict business logic to generate optimized work shifts.
 Crucially, it highlights how the system empowers users to seamlessly define and adjust these business boundaries from the interface, ensuring the application easily adapts to the constant evolution and scaling of their store.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 5 -- Security and Data Protection}} \\[0.3em]
-\noindent Focuses on the robust security infrastructure inherent to the Spring Boot ecosystem.
+\noindent\textbf {Chapter 5} focuses on the robust security infrastructure inherent to the Spring Boot ecosystem.
 It explains how personal and sensitive data is shielded from public access, ensuring user privacy.
 The chapter details the implementation of enterprise-grade security techniques—such as encrypted passwords and secure token-based authentication — making the individually created manager accounts highly resilient against unauthorized access or data breaches.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 6 -- Front-end implementation and design}} \\[0.3em]
-\noindent Details the development of the client-side application, built using React.
+\noindent\textbf {Chapter 6} details the development of the client-side application, built using React.
 It highlights the focus on creating an accessible, modern, and visually appealing user interface.
-The styling and user experience (UX) are specifically tailored for non-technical users, ensuring that store managers can easily authenticate, tweak business rules, visualize generated schedules and man y more without requiring any prior IT expertise.
+The styling and user experience (UX) are tailored for non-technical users, ensuring that store managers can easily authenticate, tweak business rules, visualize generated schedules and many more without requiring any prior IT expertise.
 
 \vspace{1.5em}
 
-\noindent\textbf{\large {Chapter 7 -- Conclusions and Evaluation}} \\[0.3em]
-\noindent Presents the conclusions, focusing on the application features and its long-term maintainability.
+\noindent\textbf {Chapter 7} presents the conclusions, focusing on the application features and its long-term maintainability.
 It explains how the flexible codebase allows for effortless future updates.
 Finally, it outlines the strategy for benchmarking the system's performance and utility against major market competitors.
+
+\vspace{2em} % Adds some breathing room after your text
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.6cm,
+        box/.style={rectangle, draw=black!70, thick, fill=gray!5, text width=12cm, align=center, rounded corners=1ex, minimum height=0.8cm, font=\sffamily},
+        corebox/.style={rectangle, draw=blue!70, thick, fill=blue!5, text width=12cm, align=center, rounded corners=1ex, minimum height=1cm, font=\sffamily\bfseries},
+        arrow/.style={thick, ->, >=stealth, draw=black!70}
+    ]
+
+    % Nodes
+    \node (ch1) [box] {Chapter 1: Introduction \& Problem Definition};
+    \node (ch2) [box, below of=ch1] {Chapter 2: Theoretical Background \& Market Analysis};
+    \node (ch3) [box, below of=ch2] {Chapter 3: System Architecture};
+    \node (ch4) [corebox, below of=ch3] {Chapter 4: Algorithm Implementation (Core)};
+    \node (ch5) [box, below of=ch4] {Chapter 5: Security \& Data Protection};
+    \node (ch6) [box, below of=ch5] {Chapter 6: Front-end Implementation \& Design};
+    \node (ch7) [box, below of=ch6] {Chapter 7: Conclusions \& Evaluation};
+
+    % Arrows
+    \draw [arrow] (ch1) -- (ch2);
+    \draw [arrow] (ch2) -- (ch3);
+    \draw [arrow] (ch3) -- (ch4);
+    \draw [arrow] (ch4) -- (ch5);
+    \draw [arrow] (ch5) -- (ch6);
+    \draw [arrow] (ch6) -- (ch7);
+
+    \end{tikzpicture}
+    \caption{Visual progression of the thesis structure and technical implementation.}
+    \label{fig:thesis_roadmap}
+\end{figure}
+
+\par During the preparation of this work the author used ChatGPT to improve the language and readability of the thesis. After using ChatGPT, the author reviewed and edited the content as needed and takes full responsibility for the content of the thesis.
 

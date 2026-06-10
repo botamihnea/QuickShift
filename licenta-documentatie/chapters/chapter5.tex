@@ -129,8 +129,8 @@ $\bullet$ Request Leave \\
 
 \end{tikzpicture}
 
-\caption{Role-based access control hierarchy and permission scope.}
 \label{fig:rbac}
+\caption{Role-based access control hierarchy and permission scope.}
 \end{figure}
 
 %-----------------------------------------------------------
@@ -139,7 +139,7 @@ $\bullet$ Request Leave \\
 \par To protect user credentials throughout their lifecycle, QuickShift implements a secure password storage strategy, an authenticated change workflow, and a time-limited recovery mechanism.
 
 %-----------------------------------------------------------
-\subsection{Password Storage and Authenticated Change Workflow}
+\subsection{Password storage and authenticated change workflow}
 %-----------------------------------------------------------
 \par User passwords are stored exclusively in encoded form. The \texttt{PasswordEncoder} bean configured in the Spring Security context applies a strong hashing algorithm (BCrypt\cite{bcrypt1999} by default in the Spring Security ecosystem) before any password is persisted. The raw password is never stored, logged, or returned in any API response.
 
@@ -148,24 +148,18 @@ $\bullet$ Request Leave \\
 \par New passwords are immediately encoded and stored, replacing the previous hash. The old password becomes invalid at the moment the change is committed, so subsequent requests using a JWT that was issued before the change will still be valid until the token expires, since the token is not invalidated by a password change. 
 
 %-----------------------------------------------------------
-\subsection{Forgot-Password and Time-Limited Recovery Tokens}
+\subsection{Forgot-password and time-limited recovery tokens}
 %-----------------------------------------------------------
 \par The password recovery flow is designed to be both secure and frictionless for legitimate users. When an employee or manager requests a password reset, the system generates a cryptographically random token, associates it with the requesting account, and stores it in the \texttt{PasswordResetToken} table with a 15-minute expiry and a \texttt{used} boolean flag initialized to \texttt{false}. A reset link embedding the token is then sent to the user's registered email address.
 
-\par When the user follows the link and submits a new password, the backend validates the token in three steps as summarized in Table~\ref{tab:token_validation}.
+\par When the user follows the link and submits a new password, the backend validates the token in three steps:
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|p{3.5cm}|p{6.5cm}|p{4.5cm}|}
-\hline
-\textbf{Validation Check} & \textbf{Mechanism/Database Field} & \textbf{Failure Consequence} \\ \hline
-Token Existence & Query by token string & Immediate rejection (Unknown Token) \\ \hline
-Expiration Check & Compare \texttt{expiresAt} with current time & Rejection (Expired Token) \\ \hline
-Usage Status & Verify \texttt{used} boolean flag is \texttt{false} & Rejection (Already Used Token) \\ \hline
-\end{tabular}
-\caption{Step-by-step token validation checks for password recovery.}
-\label{tab:token_validation}
-\end{table}
+\begin{enumerate}
+    \item The token must exist in the database (unknown tokens are immediately rejected).
+    \item The token must not have expired (the \texttt{expiresAt} timestamp is compared to the current time).
+    \item The token must not have been used before (the \texttt{used} flag is checked).
+\end{enumerate}
+
 
 \par If all three checks pass, the new password is encoded and stored, and the token's \texttt{used} flag is set to \texttt{true}. This invalidates the token for any future use, preventing replay attacks in which an attacker who intercepts a reset link could apply it a second time after the legitimate user has already completed the reset.
 
@@ -187,6 +181,7 @@ Usage Status & Verify \texttt{used} boolean flag is \texttt{false} & Rejection (
 
 \begin{table}[H]
 \centering
+\caption{Critical transactional bounds and inconsistency risks.}
 \begin{tabular}{|p{4.5cm}|p{9.5cm}|}
 \hline
 \textbf{Operational Flow} & \textbf{Atomic Actions and Inconsistency Risks} \\ \hline
@@ -194,7 +189,6 @@ Usage Status & Verify \texttt{used} boolean flag is \texttt{false} & Rejection (
 \textbf{Replacement Offer} & Creating the replacement shift, updating the absence request status, and updating the offer status. A failure would leave the slot marked unfilled. \\ \hline
 \textbf{Schedule Regeneration} & Deleting existing shifts, absence requests, and replacement offers, followed by generating the new schedule. A failure would leave the store with no schedule. \\ \hline
 \end{tabular}
-\caption{Critical transactional bounds and inconsistency risks.}
 \label{tab:transactional_safeguards}
 \end{table}
 
@@ -206,41 +200,34 @@ Usage Status & Verify \texttt{used} boolean flag is \texttt{false} & Rejection (
 \par QuickShift integrates email delivery to support both manager onboarding workflows and automated security notifications for user password resets.
 
 %-----------------------------------------------------------
-\subsection{Manager Onboarding and Account Provisioning}
+\subsection{Manager onboarding and account provisioning}
 %-----------------------------------------------------------
 \par Manager accounts are created exclusively by administrators through a dedicated provisioning endpoint. This design prevents self-registration of privileged accounts and maintains a controlled, auditable onboarding process for store managers.
 
-\par When an administrator provisions a new manager, the system follows the sequence of steps detailed in Table~\ref{tab:manager_provisioning}.
+\par When an administrator provisions a new manager, the system follows this sequence of steps:
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|c|l|p{9.5cm}|}
-\hline
-\textbf{Step} & \textbf{Action} & \textbf{Implementation Details} \\ \hline
-1 & Password Generation & Generates a secure, cryptographically random temporary password. \\ \hline
-2 & User Record Creation & Creates the \texttt{AppUser} record with the \texttt{MANAGER} role and the encoded temporary password. \\ \hline
-3 & Email Dispatch & Sends an onboarding email to the manager containing the credentials and setup instructions. \\ \hline
-\end{tabular}
-\caption{Manager account provisioning workflow sequence.}
-\label{tab:manager_provisioning}
-\end{table}
+\begin{enumerate}
+    \item \textbf{Password Generation:} Generates a secure, cryptographically random temporary password.
+    \item \textbf{User Record Creation:} Creates the \texttt{AppUser} record with the \texttt{MANAGER} role and the encoded temporary password.
+    \item \textbf{Email Dispatch:} Sends an onboarding email to the manager containing the credentials and setup instructions.
+\end{enumerate}
 
 \par The administrator also assigns the new manager to a specific store at provisioning time, using a dropdown populated from the list of stores that do not yet have an assigned manager. This prevents creating orphaned manager accounts and keeps the store-manager relationship consistent from the moment of account creation.
 
 %-----------------------------------------------------------
-\subsection{Email Delivery for Security-Critical Communications}
+\subsection{Email delivery for security-critical communications}
 %-----------------------------------------------------------
 \par The application integrates with an SMTP server \cite{smtp_rfc5321} via Spring's \texttt{JavaMailSender} to deliver security-critical emails. The two primary categories of dispatched emails are summarized in Table~\ref{tab:email_categories}.
 
 \begin{table}[H]
 \centering
+\caption{Categories of security-critical email communications.}
 \begin{tabular}{|p{4.5cm}|p{9.5cm}|}
 \hline
 \textbf{Email Category} & \textbf{Contents and Security Scope} \\ \hline
 \textbf{Password Reset Links} & Contains the reset URL with the embedded token, instructions, and a notice that the link expires in 15 minutes to prompt quick action. \\ \hline
 \textbf{Manager Onboarding} & Contains the temporary password and instructions to log in and change it immediately before performing any operations. \\ \hline
 \end{tabular}
-\caption{Categories of security-critical email communications.}
 \label{tab:email_categories}
 \end{table}
 
@@ -249,20 +236,13 @@ Usage Status & Verify \texttt{used} boolean flag is \texttt{false} & Rejection (
 %-----------------------------------------------------------
 \section{Summary of the Security Architecture}
 %-----------------------------------------------------------
-\par The QuickShift security model is built on four independent layers that collectively provide defense in depth, as outlined in Table~\ref{tab:security_layers}.
+\par The QuickShift security model is built on four independent layers that collectively provide defense in depth:
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|l|p{10.5cm}|}
-\hline
-\textbf{Security Layer} & \textbf{Key Mechanism and Security Value} \\ \hline
-\textbf{Authentication} & Stateless JWT-based sessions prevent session-related attacks and scale horizontally. \\ \hline
-\textbf{Authorization} & Role-based access control at URL/method level and ownership checks in service logic. \\ \hline
-\textbf{Data Isolation} & Store-scoped queries enforced server-side prevent horizontal cross-tenant access. \\ \hline
-\textbf{Account Lifecycle} & BCrypt hashing, time-limited recovery tokens, and transactional email dispatch. \\ \hline
-\end{tabular}
-\caption{Defense-in-depth security layers in QuickShift.}
-\label{tab:security_layers}
-\end{table}
+\begin{itemize}
+    \item \textbf{Authentication:} Stateless JWT-based sessions prevent session-related attacks and scale horizontally.
+    \item \textbf{Authorization:} Role-based access control at URL/method level and ownership checks in service logic.
+    \item \textbf{Data Isolation:} Store-scoped queries enforced server-side prevent horizontal cross-tenant access.
+    \item \textbf{Account Lifecycle:} BCrypt hashing, time-limited recovery tokens, and transactional email dispatch.
+\end{itemize}
 
 \par This layered design means that a weakness in one layer does not immediately compromise the entire system. An attacker who obtains a valid JWT is still constrained by role and store scope; one who gains access to the database sees only hashed passwords; one who intercepts a reset email has at most 15 minutes to use the token and cannot reuse it after the legitimate user resets their password.
