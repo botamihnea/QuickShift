@@ -3,6 +3,8 @@ package com.licenta.licentabackend.controller;
 import com.licenta.licentabackend.domain.AppUser;
 import com.licenta.licentabackend.domain.Notification;
 import com.licenta.licentabackend.dto.NotificationDto;
+import com.licenta.licentabackend.repository.AbsenceRequestRepository;
+import com.licenta.licentabackend.repository.LeaveRequestRepository;
 import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +22,19 @@ import java.util.List;
 public class NotificationController {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final AbsenceRequestRepository absenceRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
-    public NotificationController(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationController(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            AbsenceRequestRepository absenceRequestRepository,
+            LeaveRequestRepository leaveRequestRepository
+    ) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.absenceRequestRepository = absenceRequestRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
     }
 
     @GetMapping
@@ -65,6 +76,18 @@ public class NotificationController {
     private NotificationDto toDto(Notification notification) {
         Long storeId = notification.getStore() != null ? notification.getStore().getId() : null;
         String storeName = notification.getStore() != null ? notification.getStore().getStoreName() : null;
+        String absenceReason = null;
+        if (notification.getRelatedAbsenceRequestId() != null) {
+            absenceReason = absenceRequestRepository.findById(notification.getRelatedAbsenceRequestId())
+                    .map(absenceRequest -> absenceRequest.getReason())
+                    .orElse(null);
+        }
+        String leaveReason = null;
+        if (notification.getRelatedLeaveRequestId() != null) {
+            leaveReason = leaveRequestRepository.findById(notification.getRelatedLeaveRequestId())
+                    .map(leaveRequest -> leaveRequest.getReason())
+                    .orElse(null);
+        }
 
         return new NotificationDto(
                 notification.getId(),
@@ -74,7 +97,10 @@ public class NotificationController {
                 storeId,
                 storeName,
             notification.getRelatedAbsenceRequestId(),
-            notification.getRelatedLeaveRequestId()
+            notification.getRelatedLeaveRequestId(),
+            notification.getRelatedReplacementOfferId(),
+            absenceReason,
+            leaveReason
         );
     }
 }

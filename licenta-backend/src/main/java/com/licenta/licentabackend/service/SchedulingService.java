@@ -13,6 +13,7 @@ import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.AbsenceRequestRepository;
 import com.licenta.licentabackend.repository.LeaveRequestRepository;
 import com.licenta.licentabackend.repository.NotificationRepository;
+import com.licenta.licentabackend.repository.ReplacementOfferRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
 import com.licenta.licentabackend.repository.StoreRepository;
 import org.slf4j.Logger;
@@ -41,25 +42,28 @@ public class SchedulingService {
     private final CsvReaderService csvReaderService;
     private final LeaveRequestRepository leaveRequestRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
+    private final ReplacementOfferRepository replacementOfferRepository;
     private final NotificationRepository notificationRepository;
     private final String forecastCsvPath;
     int BIG_SALES_THRESHOLD = 2000;
     int MASSIVE_SALES_THRESHOLD = 5000;
 
     public SchedulingService(EmployeeRepository employeeRepository,
-                             ShiftRepository shiftRepository,
-                             StoreRepository storeRepository,
-                             CsvReaderService csvReaderService,
-                             LeaveRequestRepository leaveRequestRepository,
-                             AbsenceRequestRepository absenceRequestRepository,
-                             NotificationRepository notificationRepository,
-                             @Value("${app.forecast.csv-path:}") String forecastCsvPath) {
+            ShiftRepository shiftRepository,
+            StoreRepository storeRepository,
+            CsvReaderService csvReaderService,
+            LeaveRequestRepository leaveRequestRepository,
+            AbsenceRequestRepository absenceRequestRepository,
+            ReplacementOfferRepository replacementOfferRepository,
+            NotificationRepository notificationRepository,
+            @Value("${app.forecast.csv-path:}") String forecastCsvPath) {
         this.employeeRepository = employeeRepository;
         this.shiftRepository = shiftRepository;
         this.storeRepository = storeRepository;
         this.csvReaderService = csvReaderService;
         this.leaveRequestRepository = leaveRequestRepository;
         this.absenceRequestRepository = absenceRequestRepository;
+        this.replacementOfferRepository = replacementOfferRepository;
         this.notificationRepository = notificationRepository;
         this.forecastCsvPath = forecastCsvPath;
     }
@@ -74,7 +78,8 @@ public class SchedulingService {
         YearMonth targetMonth = resolveTargetMonth(year, month);
 
         if (forecastCsvPath == null || forecastCsvPath.isBlank()) {
-            throw new IllegalArgumentException("Forecast file path is not configured. Please set app.forecast.csv-path in application.properties.");
+            throw new IllegalArgumentException(
+                    "Forecast file path is not configured. Please set app.forecast.csv-path in application.properties.");
         }
 
         String sheetName = null;
@@ -87,8 +92,7 @@ public class SchedulingService {
         List<DayForecastDto> forecastDays = csvReaderService.readDataFromCsvForMonth(
                 forecastCsvPath,
                 targetMonth,
-                sheetName
-        );
+                sheetName);
         if (forecastDays.isEmpty()) {
             String source = sheetName == null ? "configured file" : "sheet " + sheetName;
             throw new IllegalArgumentException("No forecast rows found for " + targetMonth + " in " + source + ".");
@@ -113,8 +117,17 @@ public class SchedulingService {
 
         if (!existingShifts.isEmpty()) {
             List<Long> shiftIds = existingShifts.stream()
-                .map(Shift::getId)
-                .toList();
+                    .map(Shift::getId)
+                    .toList();
+            // First find absence requests linked to these shifts, then delete their child
+            // replacement_offers before deleting absence_requests (FK constraint order)
+            List<Long> absenceRequestIds = absenceRequestRepository.findByShiftIdIn(shiftIds)
+                    .stream()
+                    .map(ar -> ar.getId())
+                    .toList();
+            if (!absenceRequestIds.isEmpty()) {
+                replacementOfferRepository.deleteByAbsenceRequestIdIn(absenceRequestIds);
+            }
             absenceRequestRepository.deleteByShiftIdIn(shiftIds);
             shiftRepository.deleteAll(existingShifts);
         }
@@ -130,8 +143,7 @@ public class SchedulingService {
                 generatedShifts,
                 storeId == null
                         ? "Shifts generated successfully."
-                        : "Shifts generated successfully for your store."
-        );
+                        : "Shifts generated successfully for your store.");
     }
 
     @Transactional
@@ -146,7 +158,8 @@ public class SchedulingService {
     }
 
     @Transactional
-    public int generateSchedule(List<DayForecastDto> forecastDays, List<Employee> allEmployees, Map<LocalDate, Set<Long>> leaveMap) {
+    public int generateSchedule(List<DayForecastDto> forecastDays, List<Employee> allEmployees,
+            Map<LocalDate, Set<Long>> leaveMap) {
         log.info("Initializing Heuristic CSP Solver...");
         if (allEmployees.isEmpty()) {
             throw new NoEmployeesException("No employees found in the database!");
@@ -208,13 +221,20 @@ public class SchedulingService {
                     .filter(t -> !employeesOnLeave.contains(t.getEmployee().getId()))
                     .collect(Collectors.toList());
             /*
-            "Inițial, am încercat să optimizez algoritmul Greedy pentru a grupa zilele libere ale angajaților (pentru work-life balance).
-             Totuși, testând sistemul (QA), am observat că, pe echipe mici de 5 persoane, această constrângere "soft" intră în conflict cu constrângerile "hard" (limita legală de 5 zile lucrate consecutiv pentru ceilalți angajați).
-              Astfel, am luat decizia arhitecturală de a prioritiza Acoperirea Magazinului (Coverage) și distribuția uniformă a orelor,
-              lăsând gruparea zilelor libere pentru o iterație viitoare care ar putea folosi Meta-Heuristici mai avansate."
+             * "Inițial, am încercat să optimizez algoritmul Greedy pentru a grupa zilele
+             * libere ale angajaților (pentru work-life balance).
+             * Totuși, testând sistemul (QA), am observat că, pe echipe mici de 5 persoane,
+             * această constrângere "soft" intră în conflict cu constrângerile "hard"
+             * (limita legală de 5 zile lucrate consecutiv pentru ceilalți angajați).
+             * Astfel, am luat decizia arhitecturală de a prioritiza Acoperirea Magazinului
+             * (Coverage) și distribuția uniformă a orelor,
+             * lăsând gruparea zilelor libere pentru o iterație viitoare care ar putea
+             * folosi Meta-Heuristici mai avansate."
              */
-           // availableTrackers.sort(Comparator.comparing(EmployeeTracker::needsSecondDayOff) // first we try to have employees with 2 straight days off
-             //       .thenComparingInt(EmployeeTracker::getWorkedHoursCurrentMonth)); // then we sort them by the hour
+            // availableTrackers.sort(Comparator.comparing(EmployeeTracker::needsSecondDayOff)
+            // // first we try to have employees with 2 straight days off
+            // .thenComparingInt(EmployeeTracker::getWorkedHoursCurrentMonth)); // then we
+            // sort them by the hour
 
             availableTrackers.sort(Comparator.comparingInt(EmployeeTracker::getWorkedHoursCurrentMonth));
 
@@ -227,10 +247,12 @@ public class SchedulingService {
                 boolean requiresFullTime = (needsMorning && currentMorningCount == 0) ||
                         (!needsMorning && currentEveningCount == 0);
 
-                ShiftAssignment matchedAssignment = findBestCandidateForSlot(availableTrackers, needsMorning, requiresFullTime);
+                ShiftAssignment matchedAssignment = findBestCandidateForSlot(availableTrackers, needsMorning,
+                        requiresFullTime);
 
                 if (matchedAssignment == null) {
-                    log.warn("Did not find an employee on slot {} from {} necessary on day {}", man + 1, totalMenRequired, dayForecast.getDate());
+                    log.warn("Did not find an employee on slot {} from {} necessary on day {}", man + 1,
+                            totalMenRequired, dayForecast.getDate());
                     break;
                 }
 
@@ -238,12 +260,12 @@ public class SchedulingService {
 
                 if (matchedAssignment.proposal.isMorning) {
                     currentMorningCount++;
-                }
-                else {
+                } else {
                     currentEveningCount++;
                 }
 
-                assignEmployeesToShift(shiftsToSave, assignedToday, matchedAssignment.proposal.duration, chosenTracker, dayForecast, matchedAssignment.proposal.type);
+                assignEmployeesToShift(shiftsToSave, assignedToday, matchedAssignment.proposal.duration, chosenTracker,
+                        dayForecast, matchedAssignment.proposal.type);
             }
 
             for (EmployeeTracker tracker : trackers) {
@@ -261,17 +283,16 @@ public class SchedulingService {
 
     private Map<LocalDate, Set<Long>> buildLeaveMap(Long storeId, LocalDate startDate, LocalDate endDate) {
         List<LeaveRequest> leaveRequests = storeId == null
-            ? leaveRequestRepository.findByStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                "APPROVED",
-                endDate,
-                startDate
-            )
-            : leaveRequestRepository.findByStatusAndRequestingEmployeeStoreIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                "APPROVED",
-                storeId,
-                endDate,
-                startDate
-            );
+                ? leaveRequestRepository.findByStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        "APPROVED",
+                        endDate,
+                        startDate)
+                : leaveRequestRepository
+                        .findByStatusAndRequestingEmployeeStoreIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                                "APPROVED",
+                                storeId,
+                                endDate,
+                                startDate);
 
         Map<LocalDate, Set<Long>> leaveMap = new HashMap<>();
         for (LeaveRequest request : leaveRequests) {
@@ -316,7 +337,8 @@ public class SchedulingService {
         return YearMonth.of(year, month);
     }
 
-    private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning, boolean requiresFullTime) {
+    private ShiftAssignment findBestCandidateForSlot(List<EmployeeTracker> availableTrackers, boolean needsMorning,
+            boolean requiresFullTime) {
 
         // We search for someone who PREFERS this shift
         for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
@@ -333,8 +355,10 @@ public class SchedulingService {
                 String pref = candidate.getEmployee().getShiftPreference();
 
                 boolean isMatch = (pref == null || pref.isBlank() || pref.equalsIgnoreCase("ANY"));
-                if (needsMorning && "MORNING".equalsIgnoreCase(pref)) isMatch = true;
-                if (!needsMorning && "EVENING".equalsIgnoreCase(pref)) isMatch = true;
+                if (needsMorning && "MORNING".equalsIgnoreCase(pref))
+                    isMatch = true;
+                if (!needsMorning && "EVENING".equalsIgnoreCase(pref))
+                    isMatch = true;
 
                 if (isMatch) {
                     availableTrackers.remove(tracker);
@@ -343,7 +367,8 @@ public class SchedulingService {
             }
         }
 
-        // Step 2: Fallback. No one wants the shift so we take the first person available legally.
+        // Step 2: Fallback. No one wants the shift so we take the first person
+        // available legally.
         for (int tracker = 0; tracker < availableTrackers.size(); tracker++) {
             EmployeeTracker candidate = availableTrackers.get(tracker);
 
@@ -363,24 +388,22 @@ public class SchedulingService {
         return null; // No men available
     }
 
-    private ShiftProposal generateShiftProposal (EmployeeTracker candidate, boolean needsMorning) {
+    private ShiftProposal generateShiftProposal(EmployeeTracker candidate, boolean needsMorning) {
         String contract = candidate.getEmployee().getContractType();
 
         if ("FULL_TIME_8H".equals(contract)) {
-            return needsMorning ?
-                    new ShiftProposal(8, "SHIFT_1_10_18", true) :
-                    new ShiftProposal(8, "SHIFT_2_14_22", false);
+            return needsMorning ? new ShiftProposal(8, "SHIFT_1_10_18", true)
+                    : new ShiftProposal(8, "SHIFT_2_14_22", false);
         } else if ("PART_TIME_4H".equals(contract)) {
-            return  needsMorning ?
-                    new ShiftProposal(4, "PART_TIME_10_14", true) :
-                    new ShiftProposal(4, "PART_TIME_16_20", false);
+            return needsMorning ? new ShiftProposal(4, "PART_TIME_10_14", true)
+                    : new ShiftProposal(4, "PART_TIME_16_20", false);
         } else if ("PART_TIME_6H".equals(contract)) {
-            return needsMorning ?
-                    new ShiftProposal(6, "PART_TIME_10_16", true) :
-                    new ShiftProposal(6, "PART_TIME_16_22", false);
+            return needsMorning ? new ShiftProposal(6, "PART_TIME_10_16", true)
+                    : new ShiftProposal(6, "PART_TIME_16_22", false);
         }
 
-        return  new ShiftProposal (8, "UNKNOWN", needsMorning); // SPECIAL CASE WHEN THE EMPLOYEE HAS CORRUPTED DATA IN THE DB
+        return new ShiftProposal(8, "UNKNOWN", needsMorning); // SPECIAL CASE WHEN THE EMPLOYEE HAS CORRUPTED DATA IN
+                                                              // THE DB
     }
 
     private boolean canWorkMoreHoursThisWeek(EmployeeTracker tracker, int incomingHoursOnShift) {
@@ -400,7 +423,9 @@ public class SchedulingService {
         return false;
     }
 
-    private void assignEmployeesToShift(List<Shift> shiftsToSave, List<EmployeeTracker> assignedToday, int actualShiftDuration, EmployeeTracker chosenTracker, DayForecastDto dayForecast, String actualShiftType) {
+    private void assignEmployeesToShift(List<Shift> shiftsToSave, List<EmployeeTracker> assignedToday,
+            int actualShiftDuration, EmployeeTracker chosenTracker, DayForecastDto dayForecast,
+            String actualShiftType) {
         chosenTracker.assignShift(actualShiftDuration);
         assignedToday.add(chosenTracker);
 
@@ -417,7 +442,7 @@ public class SchedulingService {
         String type;
         boolean isMorning;
 
-        public ShiftProposal (int duration, String type, boolean isMorning) {
+        public ShiftProposal(int duration, String type, boolean isMorning) {
             this.duration = duration;
             this.type = type;
             this.isMorning = isMorning;
@@ -428,7 +453,7 @@ public class SchedulingService {
         EmployeeTracker tracker;
         ShiftProposal proposal;
 
-        public ShiftAssignment (EmployeeTracker tracker, ShiftProposal proposal) {
+        public ShiftAssignment(EmployeeTracker tracker, ShiftProposal proposal) {
             this.tracker = tracker;
             this.proposal = proposal;
         }

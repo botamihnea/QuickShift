@@ -34,8 +34,7 @@ public class EmployeeController {
     public EmployeeController(
             EmployeeRepository employeeRepository,
             UserRepository userRepository,
-            ShiftRepository shiftRepository
-    ) {
+            ShiftRepository shiftRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.shiftRepository = shiftRepository;
@@ -46,8 +45,7 @@ public class EmployeeController {
             Authentication authentication,
             @RequestParam(required = false) Long storeId,
             @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month
-    ) {
+            @RequestParam(required = false) Integer month) {
         AppUser user = resolveCurrentUser(authentication);
 
         YearMonth targetMonth = resolveTargetMonth(year, month);
@@ -94,8 +92,7 @@ public class EmployeeController {
                 employee.getRemainingLeaveDays(),
                 employee.getHolidayRecoveryHours(),
                 storeId,
-                storeName
-        ));
+                storeName));
     }
 
     @DeleteMapping("/{id}")
@@ -150,8 +147,7 @@ public class EmployeeController {
                 employee.getShiftPreference(),
                 employee.getRemainingLeaveDays(),
                 employee.getHolidayRecoveryHours(),
-                plannedHours
-        );
+                plannedHours);
     }
 
     private YearMonth resolveTargetMonth(Integer year, Integer month) {
@@ -180,8 +176,8 @@ public class EmployeeController {
             return totals;
         }
 
-        List<com.licenta.licentabackend.domain.Shift> shifts =
-                shiftRepository.findByEmployeeStoreIdAndShiftDateBetween(storeId, start, end);
+        List<com.licenta.licentabackend.domain.Shift> shifts = shiftRepository
+                .findByEmployeeStoreIdAndShiftDateBetween(storeId, start, end);
         for (com.licenta.licentabackend.domain.Shift shift : shifts) {
             if ("ABSENT".equals(shift.getStatus())) {
                 continue;

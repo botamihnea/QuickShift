@@ -20,7 +20,8 @@ public class AbsenceRequest {
     private Employee requestingEmployee;
 
     // "PENDING" -> manager notified, not yet acted on
-    // "COVERED" -> replacement found and inserted
+    // "PENDING_REPLACEMENT" -> replacement offer sent, awaiting response
+    // "COVERED" -> replacement accepted and inserted
     // "UNRESOLVABLE" -> acknowledged but no replacement available
     @Column(nullable = false)
     private String status;

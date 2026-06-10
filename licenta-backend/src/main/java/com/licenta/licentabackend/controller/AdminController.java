@@ -38,8 +38,7 @@ public class AdminController {
             UserRepository userRepository,
             EmployeeRepository employeeRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService
-    ) {
+            EmailService emailService) {
         this.storeRepository = storeRepository;
         this.userRepository = userRepository;
         this.employeeRepository = employeeRepository;
@@ -55,20 +54,17 @@ public class AdminController {
             throw new IllegalArgumentException("A store with this name already exists.");
         }
 
-
         Store newStore = new Store(
                 request.storeName(),
                 request.address(),
-                request.busyDaySalesThreshold()
-        );
+                request.busyDaySalesThreshold());
 
         Store savedStore = storeRepository.save(newStore);
 
         StoreDto responseDto = new StoreDto(
-            savedStore.getId(),
-            savedStore.getStoreName(),
-            savedStore.getBusyDaySalesThreshold()
-        );
+                savedStore.getId(),
+                savedStore.getStoreName(),
+                savedStore.getBusyDaySalesThreshold());
 
         return ResponseEntity.ok(responseDto);
     }
@@ -87,9 +83,8 @@ public class AdminController {
                         employee.getContractType(),
                         employee.getShiftPreference(),
                         employee.getRemainingLeaveDays(),
-                    employee.getHolidayRecoveryHours(),
-                    null
-                ))
+                        employee.getHolidayRecoveryHours(),
+                        null))
                 .toList();
 
         return ResponseEntity.ok(new StoreStaffResponse(manager, employees));
@@ -122,8 +117,7 @@ public class AdminController {
                 request.email().trim(),
                 passwordEncoder.encode(tempPassword),
                 Role.MANAGER,
-                store
-        );
+                store);
         userRepository.save(manager);
 
         emailService.sendManagerWelcomeEmail(manager.getEmail(), tempPassword);
@@ -134,8 +128,7 @@ public class AdminController {
     @PutMapping("/stores/{storeId}/threshold")
     public ResponseEntity<StoreDto> updateStoreThreshold(
             @PathVariable Long storeId,
-            @RequestBody UpdateBusyDayThresholdRequest request
-    ) {
+            @RequestBody UpdateBusyDayThresholdRequest request) {
         if (request == null || request.busyDaySalesThreshold() == null || request.busyDaySalesThreshold() <= 0) {
             return ResponseEntity.badRequest().build();
         }
@@ -149,8 +142,7 @@ public class AdminController {
         return ResponseEntity.ok(new StoreDto(
                 savedStore.getId(),
                 savedStore.getStoreName(),
-                savedStore.getBusyDaySalesThreshold()
-        ));
+                savedStore.getBusyDaySalesThreshold()));
     }
 
     private String generateTempPassword(int length) {

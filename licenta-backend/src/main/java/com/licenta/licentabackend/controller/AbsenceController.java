@@ -76,6 +76,30 @@ public class AbsenceController {
         }
     }
 
+    /**
+     * POST /api/absence-requests/{id}/find-replacement
+     * Manager triggers another replacement offer.
+     */
+    @PostMapping("/absence-requests/{id}/find-replacement")
+    public ResponseEntity<?> findAnotherReplacement(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        AppUser currentUser = resolveCurrentUser(authentication);
+
+        if (currentUser.getRole() != Role.MANAGER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Only managers can find replacements.");
+        }
+
+        try {
+            absenceService.findAnotherReplacement(id, currentUser);
+            return ResponseEntity.ok("Replacement search triggered.");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
     private AppUser resolveCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalArgumentException("No authenticated user found.");

@@ -37,6 +37,10 @@ public class Notification {
     @Column(name = "related_leave_request_id")
     private Long relatedLeaveRequestId;
 
+    // Non-null only for replacement-offer notifications sent to employees
+    @Column(name = "related_replacement_offer_id")
+    private Long relatedReplacementOfferId;
+
     public Notification() {}
 
     public Notification(String message, AppUser recipient, Store store) {
@@ -55,6 +59,11 @@ public class Notification {
     public Notification(String message, AppUser recipient, Store store, Long relatedAbsenceRequestId, Long relatedLeaveRequestId) {
         this(message, recipient, store, relatedAbsenceRequestId);
         this.relatedLeaveRequestId = relatedLeaveRequestId;
+    }
+
+    public Notification(String message, AppUser recipient, Store store, Long relatedAbsenceRequestId, Long relatedLeaveRequestId, Long relatedReplacementOfferId) {
+        this(message, recipient, store, relatedAbsenceRequestId, relatedLeaveRequestId);
+        this.relatedReplacementOfferId = relatedReplacementOfferId;
     }
 
     public Long getId() {
@@ -111,5 +120,13 @@ public class Notification {
 
     public void setRelatedLeaveRequestId(Long relatedLeaveRequestId) {
         this.relatedLeaveRequestId = relatedLeaveRequestId;
+    }
+
+    public Long getRelatedReplacementOfferId() {
+        return relatedReplacementOfferId;
+    }
+
+    public void setRelatedReplacementOfferId(Long relatedReplacementOfferId) {
+        this.relatedReplacementOfferId = relatedReplacementOfferId;
     }
 }

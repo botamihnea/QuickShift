@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ public class AbsenceService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final ReplacementOfferRepository replacementOfferRepository;
 
     public AbsenceService(
             AbsenceRequestRepository absenceRequestRepository,
@@ -32,13 +34,15 @@ public class AbsenceService {
             EmployeeRepository employeeRepository,
             NotificationRepository notificationRepository,
             UserRepository userRepository,
-            LeaveRequestRepository leaveRequestRepository) {
+            LeaveRequestRepository leaveRequestRepository,
+            ReplacementOfferRepository replacementOfferRepository) {
         this.absenceRequestRepository = absenceRequestRepository;
         this.shiftRepository = shiftRepository;
         this.employeeRepository = employeeRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.replacementOfferRepository = replacementOfferRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -141,75 +145,54 @@ public class AbsenceService {
         absentShift.setStatus("ABSENT");
         shiftRepository.save(absentShift);
 
+        if (!wasReplacementShift) {
+            decrementLeaveDaysIfPossible(absenceRequest.getRequestingEmployee());
+        }
+
         LocalDate absenceDate = absentShift.getShiftDate();
         String shiftType = absentShift.getShiftType();
 
-        // 4. Find the best replacement using CSP-compatible logic
-        Employee replacement = findBestReplacement(absenceDate, shiftType, store.getId(),
-                absenceRequest.getRequestingEmployee().getId());
-
-        if (replacement != null) {
-            // 5a. Insert replacement shift into the schedule (appears on the main calendar)
-            Shift replacementShift = new Shift();
-            replacementShift.setEmployee(replacement);
-            replacementShift.setShiftDate(absenceDate);
-            replacementShift.setShiftType(shiftType);
-            replacementShift.setStatus("REPLACEMENT");
-            shiftRepository.save(replacementShift);
-
-            absenceRequest.setStatus("COVERED");
-
-            if (!wasReplacementShift) {
-                decrementLeaveDaysIfPossible(absenceRequest.getRequestingEmployee());
-            }
-
-            // 6a. Notify the replacement employee
-            AppUser replacementUser = replacement.getAppUser();
-            if (replacementUser != null) {
-                String replMsg = String.format(
-                        "[NEW SHIFT] You have been assigned an extra shift on %s (%s) because a colleague cannot attend.",
-                        absenceDate, shiftType);
-                notificationRepository.save(new Notification(replMsg, replacementUser, store));
-            }
-
-            // 6b. Confirm to manager
-            String confirmMsg = String.format(
-                    "[COVERED] Absence acknowledged. %s will cover the %s (%s) shift.",
-                    replacement.getFullName(), absenceDate, shiftType);
-            notificationRepository.save(new Notification(confirmMsg, manager, store));
-
-            log.info("Replacement {} assigned to shift on {} for store {}", replacement.getId(), absenceDate,
-                    store.getId());
-            absenceRequestRepository.save(absenceRequest);
-            return new AcknowledgeAbsenceResponse(true, replacement.getFullName());
-
-        } else {
-            // 5b. No replacement found
+        Employee replacement = findNextReplacement(absenceRequest, store.getId(), absenceDate, shiftType);
+        if (replacement == null) {
             absenceRequest.setStatus("UNRESOLVABLE");
+            absenceRequestRepository.save(absenceRequest);
 
             String noReplMsg = String.format(
                     "[NO REPLACEMENT] No available replacement found for the %s (%s) shift. Manual intervention required.",
                     absenceDate, shiftType);
-            notificationRepository.save(new Notification(noReplMsg, manager, store));
-
+            notificationRepository.save(new Notification(noReplMsg, manager, store, absenceRequest.getId(), null, null));
             log.warn("No replacement found for shift on {} in store {}", absenceDate, store.getId());
-            absenceRequestRepository.save(absenceRequest);
             return new AcknowledgeAbsenceResponse(false, null);
         }
+
+        ReplacementOffer offer = createReplacementOffer(absenceRequest, replacement, absenceDate, shiftType);
+        absenceRequest.setStatus("PENDING_REPLACEMENT");
+        absenceRequestRepository.save(absenceRequest);
+
+        notifyReplacementOffer(offer, store);
+        notifyManagerOffer(manager, store, replacement, absenceDate, shiftType);
+
+        return new AcknowledgeAbsenceResponse(true, replacement.getFullName());
     }
 
     // -------------------------------------------------------------------------
     // CSP replacement finder — reconstructs tracker state from real DB data
     // -------------------------------------------------------------------------
-    private Employee findBestReplacement(LocalDate absenceDate, String absentShiftType,
+        private Employee findBestReplacement(LocalDate absenceDate, String absentShiftType,
             Long storeId, Long absentEmployeeId) {
+        return findBestReplacement(absenceDate, absentShiftType, storeId, absentEmployeeId, Set.of());
+        }
+
+        private Employee findBestReplacement(LocalDate absenceDate, String absentShiftType,
+            Long storeId, Long absentEmployeeId, Set<Long> excludedEmployeeIds) {
 
         // Load all store employees
         List<Employee> allStoreEmployees = employeeRepository.findByStoreId(storeId);
 
         // Exclude the absent employee themselves
         List<Employee> candidates = allStoreEmployees.stream()
-                .filter(e -> !e.getId().equals(absentEmployeeId))
+            .filter(e -> !e.getId().equals(absentEmployeeId))
+            .filter(e -> !excludedEmployeeIds.contains(e.getId()))
                 .collect(Collectors.toList());
 
         if (candidates.isEmpty()) {
@@ -310,6 +293,177 @@ public class AbsenceService {
                 .thenComparingInt(EmployeeTracker::getWorkedHoursCurrentMonth));
 
         return eligible.get(0).getEmployee();
+    }
+
+    @Transactional
+    public void approveReplacementOffer(Long offerId, AppUser currentUser) {
+        ReplacementOffer offer = replacementOfferRepository.findById(offerId)
+                .orElseThrow(() -> new IllegalArgumentException("Replacement offer not found."));
+
+        if (!"PENDING".equals(offer.getStatus())) {
+            throw new IllegalArgumentException("This replacement offer has already been processed.");
+        }
+
+        if (offer.getEmployee().getAppUser() == null
+                || !offer.getEmployee().getAppUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("This replacement offer does not belong to you.");
+        }
+
+        AbsenceRequest absenceRequest = offer.getAbsenceRequest();
+        Store store = absenceRequest.getRequestingEmployee().getStore();
+        Shift replacementShift = new Shift();
+        replacementShift.setEmployee(offer.getEmployee());
+        replacementShift.setShiftDate(offer.getShiftDate());
+        replacementShift.setShiftType(offer.getShiftType());
+        replacementShift.setStatus("REPLACEMENT");
+        shiftRepository.save(replacementShift);
+
+        absenceRequest.setStatus("COVERED");
+        absenceRequestRepository.save(absenceRequest);
+
+        offer.setStatus("ACCEPTED");
+        offer.setDecidedAt(LocalDateTime.now());
+        replacementOfferRepository.save(offer);
+
+        notifyManagers(store, String.format(
+                "[REPLACEMENT ACCEPTED] %s accepted the extra shift on %s (%s).",
+                offer.getEmployee().getFullName(), offer.getShiftDate(), offer.getShiftType()
+        ));
+    }
+
+    @Transactional
+    public void denyReplacementOffer(Long offerId, AppUser currentUser) {
+        ReplacementOffer offer = replacementOfferRepository.findById(offerId)
+                .orElseThrow(() -> new IllegalArgumentException("Replacement offer not found."));
+
+        if (!"PENDING".equals(offer.getStatus())) {
+            throw new IllegalArgumentException("This replacement offer has already been processed.");
+        }
+
+        if (offer.getEmployee().getAppUser() == null
+                || !offer.getEmployee().getAppUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("This replacement offer does not belong to you.");
+        }
+
+        offer.setStatus("DENIED");
+        offer.setDecidedAt(LocalDateTime.now());
+        replacementOfferRepository.save(offer);
+
+        AbsenceRequest absenceRequest = offer.getAbsenceRequest();
+        Store store = absenceRequest.getRequestingEmployee().getStore();
+        if (store != null) {
+            String declinedMessage = String.format(
+                    "[REPLACEMENT DECLINED] %s refused the extra shift on %s (%s).",
+                    offer.getEmployee().getFullName(), offer.getShiftDate(), offer.getShiftType()
+            );
+            notifyManagers(store, declinedMessage, absenceRequest.getId());
+        }
+
+        attemptAutoReplacement(absenceRequest);
+    }
+
+    @Transactional
+    public void findAnotherReplacement(Long absenceRequestId, AppUser manager) {
+        AbsenceRequest absenceRequest = absenceRequestRepository.findById(absenceRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("Absence request not found."));
+
+        Store store = absenceRequest.getRequestingEmployee().getStore();
+        if (store == null || !store.getId().equals(manager.getStore().getId())) {
+            throw new IllegalArgumentException("You are not the manager of this store.");
+        }
+
+        boolean hasPending = replacementOfferRepository
+                .findByAbsenceRequestIdAndStatus(absenceRequestId, "PENDING")
+                .isPresent();
+        if (hasPending) {
+            throw new IllegalArgumentException("There is already a pending replacement offer.");
+        }
+
+        attemptAutoReplacement(absenceRequest);
+    }
+
+    private void attemptAutoReplacement(AbsenceRequest absenceRequest) {
+        Shift absentShift = absenceRequest.getShift();
+        LocalDate absenceDate = absentShift.getShiftDate();
+        String shiftType = absentShift.getShiftType();
+        Store store = absenceRequest.getRequestingEmployee().getStore();
+        if (store == null) {
+            return;
+        }
+
+        Employee replacement = findNextReplacement(absenceRequest, store.getId(), absenceDate, shiftType);
+        if (replacement == null) {
+            absenceRequest.setStatus("UNRESOLVABLE");
+            absenceRequestRepository.save(absenceRequest);
+            String noReplMsg = String.format(
+                    "[NO REPLACEMENT] No available replacement found for the %s (%s) shift. Manual intervention required.",
+                    absenceDate, shiftType);
+            notifyManagers(store, noReplMsg, absenceRequest.getId());
+            return;
+        }
+
+        ReplacementOffer offer = createReplacementOffer(absenceRequest, replacement, absenceDate, shiftType);
+        absenceRequest.setStatus("PENDING_REPLACEMENT");
+        absenceRequestRepository.save(absenceRequest);
+
+        notifyReplacementOffer(offer, store);
+        notifyManagers(store, String.format(
+                "[REPLACEMENT OFFER] %s was asked to cover the %s (%s) shift.",
+                replacement.getFullName(), absenceDate, shiftType
+        ));
+    }
+
+    private ReplacementOffer createReplacementOffer(AbsenceRequest absenceRequest, Employee replacement,
+                                                    LocalDate absenceDate, String shiftType) {
+        ReplacementOffer offer = new ReplacementOffer(absenceRequest, replacement, absenceDate, shiftType);
+        return replacementOfferRepository.save(offer);
+    }
+
+    private void notifyReplacementOffer(ReplacementOffer offer, Store store) {
+        AppUser replacementUser = offer.getEmployee().getAppUser();
+        if (replacementUser == null) {
+            return;
+        }
+        String replMsg = String.format(
+                "[REPLACEMENT OFFER] You were selected to cover an extra shift on %s (%s). Please accept or decline.",
+                offer.getShiftDate(), offer.getShiftType()
+        );
+        notificationRepository.save(
+                new Notification(replMsg, replacementUser, store, null, null, offer.getId())
+        );
+    }
+
+    private void notifyManagerOffer(AppUser manager, Store store, Employee replacement, LocalDate absenceDate, String shiftType) {
+        String confirmMsg = String.format(
+                "[REPLACEMENT OFFER] %s was asked to cover the %s (%s) shift.",
+                replacement.getFullName(), absenceDate, shiftType
+        );
+        notificationRepository.save(new Notification(confirmMsg, manager, store));
+    }
+
+    private void notifyManagers(Store store, String message) {
+        notifyManagers(store, message, null);
+    }
+
+    private void notifyManagers(Store store, String message, Long relatedAbsenceRequestId) {
+        List<AppUser> managers = userRepository.findByStoreIdAndRole(store.getId(), Role.MANAGER);
+        for (AppUser manager : managers) {
+            notificationRepository.save(new Notification(message, manager, store, relatedAbsenceRequestId, null, null));
+        }
+    }
+
+    private Employee findNextReplacement(AbsenceRequest absenceRequest, Long storeId, LocalDate absenceDate, String shiftType) {
+        Long absentEmployeeId = absenceRequest.getRequestingEmployee().getId();
+        Set<Long> excluded = replacementOfferRepository.findByAbsenceRequestId(absenceRequest.getId()).stream()
+                .map(offer -> offer.getEmployee().getId())
+                .collect(Collectors.toSet());
+        excluded.add(absentEmployeeId);
+
+        Employee candidate = findBestReplacement(absenceDate, shiftType, storeId, absentEmployeeId, excluded);
+        if (candidate == null) {
+            return null;
+        }
+        return candidate;
     }
 
     // -------------------------------------------------------------------------

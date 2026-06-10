@@ -45,11 +45,11 @@ public class AuthenticationService {
             JwtService jwtService,
             AuthenticationManager authenticationManager,
             StoreRepository storeRepository,
-                                                EmployeeRepository employeeRepository,
-                                                NotificationRepository notificationRepository,
-                                                PasswordResetTokenRepository passwordResetTokenRepository,
-                                                EmailService emailService,
-                                                @Value("${app.frontend.url}") String frontendUrl
+            EmployeeRepository employeeRepository,
+            NotificationRepository notificationRepository,
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            EmailService emailService,
+            @Value("${app.frontend.url}") String frontendUrl
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -74,7 +74,7 @@ public class AuthenticationService {
         AppUser user = new AppUser(
                 request.email(),
                 passwordEncoder.encode(request.password()),
-                Role.EMPLOYEE, //default for now,
+                Role.EMPLOYEE,
                 store
         );
 
@@ -122,10 +122,17 @@ public class AuthenticationService {
 
         Long storeId = user.getStore() != null ? user.getStore().getId() : null;
         String storeName = user.getStore() != null ? user.getStore().getStoreName() : null;
+        String fullName = null;
+        if (user.getRole() == Role.EMPLOYEE) {
+            fullName = employeeRepository.findByAppUserId(user.getId())
+                    .map(Employee::getFullName)
+                    .orElse(null);
+        }
 
         return new AuthenticatedUserResponse(
                 user.getEmail(),
                 user.getRole().name(),
+                fullName,
                 storeId,
                 storeName
         );

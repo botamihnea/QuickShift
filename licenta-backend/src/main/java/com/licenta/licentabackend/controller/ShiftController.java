@@ -2,8 +2,10 @@ package com.licenta.licentabackend.controller;
 
 import com.licenta.licentabackend.domain.AppUser;
 import com.licenta.licentabackend.domain.Role;
+import com.licenta.licentabackend.dto.EligibleEmployeeDto;
 import com.licenta.licentabackend.dto.GenerateScheduleRequestDto;
 import com.licenta.licentabackend.dto.GenerateScheduleResponseDto;
+import com.licenta.licentabackend.dto.ManualShiftRequest;
 import com.licenta.licentabackend.dto.ShiftDto;
 import com.licenta.licentabackend.exceptions.FailedReadingException;
 import com.licenta.licentabackend.exceptions.NoEmployeesException;
@@ -11,17 +13,21 @@ import com.licenta.licentabackend.repository.ShiftRepository;
 import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.service.SchedulingService;
+import com.licenta.licentabackend.service.ShiftManagementService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -30,17 +36,20 @@ import java.util.List;
 public class ShiftController {
     private final ShiftRepository shiftRepository;
     private final SchedulingService schedulingService;
+    private final ShiftManagementService shiftManagementService;
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
 
     public ShiftController(
             ShiftRepository shiftRepository,
             SchedulingService schedulingService,
+            ShiftManagementService shiftManagementService,
             UserRepository userRepository,
             EmployeeRepository employeeRepository
     ) {
         this.shiftRepository = shiftRepository;
         this.schedulingService = schedulingService;
+        this.shiftManagementService = shiftManagementService;
         this.userRepository = userRepository;
         this.employeeRepository = employeeRepository;
     }
@@ -136,6 +145,97 @@ public class ShiftController {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (NoEmployeesException | FailedReadingException ex) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
+        }
+    }
+
+    @GetMapping("/eligible")
+    public ResponseEntity<?> getEligibleEmployees(
+            Authentication authentication,
+            @RequestParam LocalDate date,
+            @RequestParam String shiftType,
+            @RequestParam(required = false) Long storeId
+    ) {
+        AppUser currentUser = resolveCurrentUser(authentication);
+        if (currentUser.getRole() == Role.EMPLOYEE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only managers and admins can access eligibility.");
+        }
+
+        Long targetStoreId;
+        if (currentUser.getRole() == Role.ADMIN) {
+            if (storeId == null) {
+                return ResponseEntity.badRequest().body("Store is required for admin eligibility lookup.");
+            }
+            targetStoreId = storeId;
+        } else {
+            targetStoreId = resolveStoreId(currentUser);
+        }
+
+        List<EligibleEmployeeDto> result = shiftManagementService
+                .getEligibleEmployees(targetStoreId, date, shiftType)
+                .stream()
+                .map(employee -> new EligibleEmployeeDto(
+                        employee.getId(),
+                        employee.getFullName(),
+                        employee.getContractType(),
+                        employee.getShiftPreference()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/manual")
+    public ResponseEntity<?> createManualShift(
+            @RequestBody ManualShiftRequest request,
+            Authentication authentication
+    ) {
+        AppUser currentUser = resolveCurrentUser(authentication);
+        if (currentUser.getRole() == Role.EMPLOYEE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only managers and admins can add shifts.");
+        }
+
+        if (request == null || request.date() == null || request.shiftType() == null || request.employeeId() == null) {
+            return ResponseEntity.badRequest().body("Date, shift type, and employee are required.");
+        }
+
+        Long targetStoreId = currentUser.getRole() == Role.ADMIN
+            ? request.storeId()
+            : resolveStoreId(currentUser);
+        if (currentUser.getRole() == Role.ADMIN && targetStoreId == null) {
+            return ResponseEntity.badRequest().body("Store is required for admin shift creation.");
+        }
+
+        try {
+            ShiftDto dto = toDto(shiftManagementService.createManualShift(targetStoreId, request.employeeId(), request.date(), request.shiftType()));
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+        public ResponseEntity<?> deleteShift(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long storeId,
+            Authentication authentication
+        ) {
+        AppUser currentUser = resolveCurrentUser(authentication);
+        if (currentUser.getRole() == Role.EMPLOYEE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only managers and admins can delete shifts.");
+        }
+
+        Long targetStoreId = currentUser.getRole() == Role.ADMIN
+            ? storeId
+            : resolveStoreId(currentUser);
+        if (targetStoreId == null) {
+            return ResponseEntity.badRequest().body("Store is required for shift deletion.");
+        }
+
+        try {
+            shiftManagementService.deleteShift(targetStoreId, id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }
 
