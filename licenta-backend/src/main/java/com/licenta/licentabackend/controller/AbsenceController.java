@@ -6,6 +6,8 @@ import com.licenta.licentabackend.dto.AbsenceReportRequest;
 import com.licenta.licentabackend.dto.AcknowledgeAbsenceResponse;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.service.AbsenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class AbsenceController {
+
+    private static final Logger log = LoggerFactory.getLogger(AbsenceController.class);
 
     private final AbsenceService absenceService;
     private final UserRepository userRepository;
@@ -45,8 +49,10 @@ public class AbsenceController {
         try {
             String reason = request != null ? request.reason() : null;
             absenceService.reportAbsence(shiftId, reason, currentUser);
+            log.info("Absence reported: shift={}, user={}", shiftId, currentUser.getEmail());
             return ResponseEntity.ok("Your manager has been notified. We will find a replacement for your shift.");
         } catch (IllegalArgumentException ex) {
+            log.warn("Absence report failed for shift {}: {}", shiftId, ex.getMessage());
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }
@@ -70,6 +76,7 @@ public class AbsenceController {
 
         try {
             AcknowledgeAbsenceResponse result = absenceService.acknowledgeAbsence(id, currentUser);
+            log.info("Absence acknowledged: request={}, replacementFound={}", id, result.replacementFound());
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -94,6 +101,7 @@ public class AbsenceController {
 
         try {
             absenceService.findAnotherReplacement(id, currentUser);
+            log.info("Replacement search triggered: request={}", id);
             return ResponseEntity.ok("Replacement search triggered.");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());

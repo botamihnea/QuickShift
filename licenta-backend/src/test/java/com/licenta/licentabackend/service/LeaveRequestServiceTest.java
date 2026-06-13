@@ -61,7 +61,7 @@ class LeaveRequestServiceTest {
         AppUser manager = org.mockito.Mockito.mock(AppUser.class);
         when(manager.getRole()).thenReturn(Role.MANAGER);
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
         LeaveRequestCreateRequest request = new LeaveRequestCreateRequest(
                 allowedStart.plusDays(1),
                 allowedStart.plusDays(2),
@@ -89,7 +89,7 @@ class LeaveRequestServiceTest {
 
         AppUser manager = org.mockito.Mockito.mock(AppUser.class);
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
         LocalDate startDate = allowedStart.plusDays(1);
         LocalDate endDate = startDate.plusDays(2);
         LeaveRequestCreateRequest request = new LeaveRequestCreateRequest(startDate, endDate, "vacation");
@@ -132,7 +132,7 @@ class LeaveRequestServiceTest {
         employee.setId(55L);
         employee.setRemainingLeaveDays(5);
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
         LeaveRequestCreateRequest request = new LeaveRequestCreateRequest(
                 allowedStart.plusDays(2),
                 allowedStart.plusDays(3),
@@ -176,7 +176,7 @@ class LeaveRequestServiceTest {
         employee.setId(66L);
         employee.setRemainingLeaveDays(0);
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
         LeaveRequestCreateRequest request = new LeaveRequestCreateRequest(
                 allowedStart.plusDays(2),
                 allowedStart.plusDays(3),
@@ -199,7 +199,7 @@ class LeaveRequestServiceTest {
         employee.setId(77L);
         employee.setRemainingLeaveDays(1);
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
         LeaveRequestCreateRequest request = new LeaveRequestCreateRequest(
                 allowedStart.plusDays(1),
                 allowedStart.plusDays(6),
@@ -224,7 +224,7 @@ class LeaveRequestServiceTest {
         employee.setStore(store);
         employee.setAppUser(org.mockito.Mockito.mock(AppUser.class));
 
-        LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(1).plusDays(3);
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(2).plusDays(3);
         LocalDate endDate = startDate.plusDays(1);
         LeaveRequest leaveRequest = new LeaveRequest(employee, startDate, endDate, 2, 2, "family");
 
@@ -276,7 +276,7 @@ class LeaveRequestServiceTest {
                 employee.setId(12L);
                 employee.setStore(store);
 
-                LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(1).plusDays(2);
+                LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(2).plusDays(2);
                 LocalDate endDate = startDate.plusDays(1);
                 LeaveRequest leaveRequest = new LeaveRequest(employee, startDate, endDate, 2, 2, "trip");
 
@@ -300,7 +300,7 @@ class LeaveRequestServiceTest {
         employee.setStore(store);
         employee.setAppUser(org.mockito.Mockito.mock(AppUser.class));
 
-        LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(1).plusDays(5);
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(2).plusDays(5);
         LocalDate endDate = startDate.plusDays(1);
         LeaveRequest leaveRequest = new LeaveRequest(employee, startDate, endDate, 2, 2, "trip");
 
@@ -331,7 +331,7 @@ class LeaveRequestServiceTest {
                 employee.setStore(store);
                 employee.setAppUser(org.mockito.Mockito.mock(AppUser.class));
 
-                LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(1).plusDays(6);
+                LocalDate startDate = LocalDate.now().withDayOfMonth(1).plusMonths(2).plusDays(6);
                 LocalDate endDate = startDate.plusDays(1);
                 LeaveRequest leaveRequest = new LeaveRequest(employee, startDate, endDate, 2, 2, "travel");
 

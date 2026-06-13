@@ -7,6 +7,8 @@ import com.licenta.licentabackend.dto.LeaveRequestResponse;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.service.LeaveRequestService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/leave-requests")
 @CrossOrigin(origins = "*")
 public class LeaveRequestController {
+
+    private static final Logger log = LoggerFactory.getLogger(LeaveRequestController.class);
 
     private final LeaveRequestService leaveRequestService;
     private final UserRepository userRepository;
@@ -33,6 +37,7 @@ public class LeaveRequestController {
         AppUser currentUser = resolveCurrentUser(authentication);
         try {
             LeaveRequestResponse response = leaveRequestService.requestLeave(currentUser, request);
+            log.info("Leave request created via API: id={}, user={}", response.id(), authentication.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -47,6 +52,7 @@ public class LeaveRequestController {
         AppUser currentUser = resolveCurrentUser(authentication);
         try {
             LeaveRequestResponse response = leaveRequestService.approveLeave(id, currentUser);
+            log.info("Leave approved via API: id={}, manager={}", id, authentication.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -62,6 +68,7 @@ public class LeaveRequestController {
         AppUser currentUser = resolveCurrentUser(authentication);
         try {
             LeaveRequestResponse response = leaveRequestService.denyLeave(id, currentUser, request);
+            log.info("Leave denied via API: id={}, manager={}", id, authentication.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());

@@ -45,8 +45,7 @@ public class SchedulingService {
     private final ReplacementOfferRepository replacementOfferRepository;
     private final NotificationRepository notificationRepository;
     private final String forecastCsvPath;
-    int BIG_SALES_THRESHOLD = 2000;
-    int MASSIVE_SALES_THRESHOLD = 5000;
+
 
     public SchedulingService(EmployeeRepository employeeRepository,
             ShiftRepository shiftRepository,
@@ -164,6 +163,16 @@ public class SchedulingService {
         if (allEmployees.isEmpty()) {
             throw new NoEmployeesException("No employees found in the database!");
         }
+        Double dbThreshold = null;
+        for (Employee emp : allEmployees) {
+            if (emp.getStore() != null && emp.getStore().getBusyDaySalesThreshold() != null) {
+                dbThreshold = emp.getStore().getBusyDaySalesThreshold();
+                break;
+            }
+        }
+        int bigSalesThreshold = (dbThreshold != null) ? dbThreshold.intValue() : 2000;
+        int massiveSalesThreshold = bigSalesThreshold * 2 + 1000;
+
         List<EmployeeTracker> trackers = allEmployees.stream()
                 .map(EmployeeTracker::new)
                 .collect(Collectors.toList());
@@ -199,12 +208,12 @@ public class SchedulingService {
 
             int projectedSale = dayForecast.getSalesForecast();
 
-            if (projectedSale > BIG_SALES_THRESHOLD) {
+            if (projectedSale > bigSalesThreshold) {
                 targetEvening++; // ZI AGLOMERATA - ADAUGAM INCA UN OM
                 log.info("Big sales estimated ({}) for {}. Upped to {} people on the evening shift.",
                         projectedSale, dayForecast.getDate(), targetEvening);
             }
-            if (projectedSale > MASSIVE_SALES_THRESHOLD) {
+            if (projectedSale > massiveSalesThreshold) {
                 targetMorning++; // ZI EXCEPTIONALA - 1 MARTIE, 8 MARTIE , ETC
                 log.info("!!! Massive sales forecast ({}) for {}. Upped to {} people on the morning shift.",
                         projectedSale, dayForecast.getDate(), targetMorning);

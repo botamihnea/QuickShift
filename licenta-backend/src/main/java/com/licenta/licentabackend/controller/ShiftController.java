@@ -14,6 +14,8 @@ import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.UserRepository;
 import com.licenta.licentabackend.service.SchedulingService;
 import com.licenta.licentabackend.service.ShiftManagementService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -34,6 +36,8 @@ import java.util.List;
 @RequestMapping("/api/shifts")
 @CrossOrigin(origins = "*")
 public class ShiftController {
+    private static final Logger log = LoggerFactory.getLogger(ShiftController.class);
+
     private final ShiftRepository shiftRepository;
     private final SchedulingService schedulingService;
     private final ShiftManagementService shiftManagementService;
@@ -140,8 +144,11 @@ public class ShiftController {
                     month,
                     targetStoreId
             );
+            log.info("Schedule generated: store={}, {}/{}, {} shifts",
+                    targetStoreId, response.targetMonth(), response.targetYear(), response.generatedShifts());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
+            log.warn("Schedule generation failed: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (NoEmployeesException | FailedReadingException ex) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
@@ -209,6 +216,7 @@ public class ShiftController {
             ShiftDto dto = toDto(shiftManagementService.createManualShift(targetStoreId, request.employeeId(), request.date(), request.shiftType()));
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException ex) {
+            log.warn("Manual shift creation failed: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }

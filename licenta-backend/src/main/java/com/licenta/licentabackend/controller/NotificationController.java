@@ -7,6 +7,8 @@ import com.licenta.licentabackend.repository.AbsenceRequestRepository;
 import com.licenta.licentabackend.repository.LeaveRequestRepository;
 import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
+    private static final Logger log = LoggerFactory.getLogger(NotificationController.class);
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
@@ -45,6 +49,7 @@ public class NotificationController {
                 .map(this::toDto)
                 .toList();
 
+        log.debug("Fetched {} notifications for user {}", result.size(), user.getEmail());
         return ResponseEntity.ok(result);
     }
 
@@ -60,6 +65,7 @@ public class NotificationController {
 
         notification.setRead(true);
         notificationRepository.save(notification);
+        log.debug("Notification {} marked as read by user {}", id, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 

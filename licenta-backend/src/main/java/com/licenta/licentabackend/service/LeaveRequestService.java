@@ -15,6 +15,8 @@ import com.licenta.licentabackend.repository.LeaveRequestRepository;
 import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
 import com.licenta.licentabackend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,8 @@ import java.util.List;
 
 @Service
 public class LeaveRequestService {
+
+    private static final Logger log = LoggerFactory.getLogger(LeaveRequestService.class);
 
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
@@ -53,6 +57,7 @@ public class LeaveRequestService {
     @Transactional
     public LeaveRequestResponse requestLeave(AppUser currentUser, LeaveRequestCreateRequest request) {
         if (currentUser.getRole() != Role.EMPLOYEE) {
+            log.warn("Leave request rejected: user {} is not an employee (role={})", currentUser.getId(), currentUser.getRole());
             throw new IllegalArgumentException("Only employees can request leave.");
         }
 
@@ -70,10 +75,9 @@ public class LeaveRequestService {
             throw new IllegalArgumentException("You can only request leave for future dates.");
         }
 
-        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(1);
-        LocalDate allowedEnd = allowedStart.plusMonths(1).minusDays(1);
-        if (startDate.isBefore(allowedStart) || endDate.isAfter(allowedEnd)) {
-            throw new IllegalArgumentException("Leave requests are only allowed for the next month.");
+        LocalDate allowedStart = LocalDate.now().withDayOfMonth(1).plusMonths(2);
+        if (startDate.isBefore(allowedStart)) {
+            throw new IllegalArgumentException("Leave requests are only allowed starting from the second next month.");
         }
 
         Employee employee = employeeRepository.findByAppUserId(currentUser.getId())
@@ -97,6 +101,7 @@ public class LeaveRequestService {
             endDate
         );
         if (overlaps) {
+            log.warn("Leave request rejected: overlapping request for employee {} in period {} to {}", employee.getId(), startDate, endDate);
             throw new IllegalArgumentException("You already have a leave request in this period.");
         }
 
@@ -126,6 +131,8 @@ public class LeaveRequestService {
             }
         }
 
+        log.info("Leave request created: id={}, employee={}, period={} to {}, deductible={} days",
+                saved.getId(), employee.getFullName(), startDate, endDate, deductibleDays);
         return new LeaveRequestResponse(saved.getId(), saved.getStatus(), requestedDays, deductibleDays, startDate, endDate);
     }
 
@@ -161,6 +168,10 @@ public class LeaveRequestService {
         leaveRequest.setStatus(STATUS_APPROVED);
         leaveRequest.setDecidedAt(LocalDateTime.now());
         leaveRequestRepository.save(leaveRequest);
+
+        log.info("Leave approved: id={}, employee={}, period={} to {}, deducted={} days (remaining={})",
+                requestId, employee.getFullName(), leaveRequest.getStartDate(), leaveRequest.getEndDate(),
+                deductibleDays, employee.getRemainingLeaveDays());
 
         markExistingShiftsAsAbsent(employee, leaveRequest.getStartDate(), leaveRequest.getEndDate());
 
@@ -213,6 +224,7 @@ public class LeaveRequestService {
         leaveRequest.setManagerResponse(reason);
         leaveRequest.setDecidedAt(LocalDateTime.now());
         leaveRequestRepository.save(leaveRequest);
+        log.info("Leave denied: id={}, employee={}, reason={}", requestId, employee.getFullName(), reason);
 
         if (employee.getAppUser() != null) {
             String employeeMessage = reason == null

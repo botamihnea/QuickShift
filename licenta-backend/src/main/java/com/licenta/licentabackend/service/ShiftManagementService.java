@@ -9,6 +9,8 @@ import com.licenta.licentabackend.repository.EmployeeRepository;
 import com.licenta.licentabackend.repository.LeaveRequestRepository;
 import com.licenta.licentabackend.repository.NotificationRepository;
 import com.licenta.licentabackend.repository.ShiftRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ShiftManagementService {
+
+    private static final Logger log = LoggerFactory.getLogger(ShiftManagementService.class);
 
     private final EmployeeRepository employeeRepository;
     private final ShiftRepository shiftRepository;
@@ -44,6 +48,7 @@ public class ShiftManagementService {
     public List<Employee> getEligibleEmployees(Long storeId, LocalDate shiftDate, String shiftType) {
         List<Employee> allStoreEmployees = employeeRepository.findByStoreId(storeId);
         if (allStoreEmployees.isEmpty()) {
+            log.debug("No employees found for store {} — returning empty eligibility list", storeId);
             return List.of();
         }
 
@@ -121,6 +126,8 @@ public class ShiftManagementService {
                 .comparingInt((EmployeeTracker t) -> preferenceScore(t.getEmployee().getShiftPreference(), isMorning))
                 .thenComparingInt(EmployeeTracker::getWorkedHoursCurrentMonth));
 
+        log.info("Eligibility check: store={}, date={}, shiftType={} → {} eligible employees",
+                storeId, shiftDate, shiftType, eligible.size());
         return eligible.stream().map(EmployeeTracker::getEmployee).toList();
     }
 
@@ -154,6 +161,9 @@ public class ShiftManagementService {
         shift.setStatus("SCHEDULED");
         Shift saved = shiftRepository.save(shift);
 
+        log.info("Manual shift created: id={}, employee={} ({}), date={}, type={}",
+                saved.getId(), employee.getFullName(), employee.getId(), shiftDate, shiftType);
+
         if (employee.getAppUser() != null) {
             String message = String.format(
                     "[NEW SHIFT] You were assigned a new shift on %s (%s).",
@@ -175,6 +185,8 @@ public class ShiftManagementService {
         }
 
         shiftRepository.delete(shift);
+        log.info("Shift deleted: id={}, employee={}, date={}, type={}",
+                shiftId, shift.getEmployee().getFullName(), shift.getShiftDate(), shift.getShiftType());
 
         if (shift.getEmployee().getAppUser() != null) {
             String message = String.format(

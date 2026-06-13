@@ -144,6 +144,8 @@ public class AbsenceService {
         boolean wasReplacementShift = "REPLACEMENT".equals(absentShift.getStatus());
         absentShift.setStatus("ABSENT");
         shiftRepository.save(absentShift);
+        log.info("Absence acknowledged: request={}, shift={} on {} marked ABSENT",
+                absenceRequestId, absentShift.getId(), absentShift.getShiftDate());
 
         if (!wasReplacementShift) {
             decrementLeaveDaysIfPossible(absenceRequest.getRequestingEmployee());
@@ -171,6 +173,8 @@ public class AbsenceService {
 
         notifyReplacementOffer(offer, store);
         notifyManagerOffer(manager, store, replacement, absenceDate, shiftType);
+        log.info("Replacement offer created: request={}, candidate={}, shift {} on {}",
+                absenceRequestId, replacement.getFullName(), shiftType, absenceDate);
 
         return new AcknowledgeAbsenceResponse(true, replacement.getFullName());
     }
@@ -317,6 +321,8 @@ public class AbsenceService {
         replacementShift.setShiftType(offer.getShiftType());
         replacementShift.setStatus("REPLACEMENT");
         shiftRepository.save(replacementShift);
+        log.info("Replacement accepted: offer={}, employee={}, shift {} on {}",
+                offerId, offer.getEmployee().getFullName(), offer.getShiftType(), offer.getShiftDate());
 
         absenceRequest.setStatus("COVERED");
         absenceRequestRepository.save(absenceRequest);
@@ -348,6 +354,7 @@ public class AbsenceService {
         offer.setStatus("DENIED");
         offer.setDecidedAt(LocalDateTime.now());
         replacementOfferRepository.save(offer);
+        log.info("Replacement denied: offer={}, employee={}", offerId, offer.getEmployee().getFullName());
 
         AbsenceRequest absenceRequest = offer.getAbsenceRequest();
         Store store = absenceRequest.getRequestingEmployee().getStore();
