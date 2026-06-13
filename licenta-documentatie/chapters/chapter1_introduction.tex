@@ -9,13 +9,13 @@ Most existing workforce scheduling solutions on the market are designed as rigid
 Quickshift was created to bridge this critical gap by introducing a data-driven, proactive, and accessible Software-as-a-Service (SaaS) solution. By combining demand forecasting with constraint satisfaction principles, the system is designed to be highly beneficial in the following real-world scenarios:
 
 \begin{itemize}
-    \item \textbf{Dynamic retail environments with fluctuating demand:} In businesses such as flower shops or boutique stores, customer traffic varies significantly depending on seasonality, holidays (e.g., Valentine's Day, Mother's Day), and delivery days. Quickshift automates shift generation by directly ingesting sales forecasts and delivery schedules, ensuring that stores are optimally staffed during peak hours while avoiding costly overstaffing during slower periods.
+    \item Dynamic retail environments with fluctuating demand: In businesses such as flower shops or boutique stores, customer traffic varies significantly depending on seasonality, holidays (e.g., Valentine's Day, Mother's Day), and delivery days. Quickshift automates shift generation by directly ingesting sales forecasts and delivery schedules, ensuring that stores are optimally staffed during peak hours while avoiding costly overstaffing during slower periods.
     
-    \item \textbf{Proactive conflict resolution and absence management:} When an employee requests unexpected time off or reports sick, the manager is typically forced to call or message multiple staff members to find a replacement. Quickshift solves this through its intelligent \texttt{findBestCandidate} algorithm. The system automatically scans the database and evaluates candidates based on contractual limitations, worked hours, and shift preferences, instantly suggesting the most appropriate and compliant replacement.
+    \item Proactive conflict resolution and absence management: When an employee requests unexpected time off or reports sick, the manager is typically forced to call or message multiple staff members to find a replacement. Quickshift solves this through its intelligent \texttt{findBestCandidate} algorithm. The system automatically scans the database and evaluates candidates based on contractual limitations, worked hours, and shift preferences, instantly suggesting the most appropriate and compliant replacement.
     
-    \item \textbf{Ensuring compliance and fairness:} In manual scheduling, it is extremely difficult for a manager to track and balance every employee's contractual hours (e.g., distinguishing between 4-hour, 6-hour, and 8-hour contracts) while enforcing legal rest periods. Quickshift automatically integrates these business rules into its core scheduling logic, ensuring fair shift distribution, preventing employee fatigue, and guaranteeing strict adherence to labor regulations.
+    \item Ensuring compliance and fairness: In manual scheduling, it is extremely difficult for a manager to track and balance every employee's contractual hours (e.g., distinguishing between 4-hour, 6-hour, and 8-hour contracts) while enforcing legal rest periods. Quickshift automatically integrates these business rules into its core scheduling logic, ensuring fair shift distribution, preventing employee fatigue, and guaranteeing strict adherence to labor regulations.
     
-    \item \textbf{Multi-tenant accessibility for growing franchises:} For business owners managing multiple independent store branches, Quickshift acts as a unified SaaS platform. It provides complete data isolation, allowing managers at different locations to configure localized rules, track their respective sales forecasts, and generate independent work schedules within a single secure ecosystem.
+    \item Multi-tenant accessibility for growing franchises: For business owners managing multiple independent store branches, Quickshift acts as a unified SaaS platform. It provides complete data isolation, allowing managers at different locations to configure localized rules, track their respective sales forecasts, and generate independent work schedules within a single secure ecosystem.
 \end{itemize}
 
 
@@ -28,7 +28,7 @@ This section summarizes the intended objectives of the application from a projec
     \item Provide a scheduling workflow that generates monthly shift plans from parsing store-specific forecasts and staffing rules.
     \item Split working hours as evenly as possible to reduce employee exhaustion and maximize productivity.
     \item Enforce contractual constraints (hours, contract type, shift preferences) and legal limits during schedule creation.
-    \item Implement a \textbf{proactive approach} when it comes to both unplanned absences and planned leave requests, automatically proposing the best replacement candidate based on several filters such as shift preference and worked hours, leaving the manager with manual work only for rare exceptional cases.
+    \item Implement a \textbf{proactive approach} when it comes to both unplanned absences and planned leave requests, automatically proposing the best replacement candidate based on multiple filters such as shift preference and worked hours, leaving the manager with manual work only for rare exceptional cases.
     \item Offer role-based access for employees, managers, and administrators, each with tailored pages and actions depending on their security permissions.
     \item Ensure data isolation per store while allowing administrators to manage multiple stores in the same system seamlessly.
     \item Deliver a predictable notification system for operational events (requests, approvals, replacements) so actions are traceable.
@@ -125,5 +125,5 @@ Finally, it outlines the strategy for benchmarking the system's performance and 
     \label{fig:thesis_roadmap}
 \end{figure}
 
-\par During the preparation of this work the author used ChatGPT to improve the language and readability of the thesis. After using ChatGPT, the author reviewed and edited the content as needed and takes full responsibility for the content of the thesis.
+\par During the preparation of this work, the author used Google Gemini to assist with language refinement, improve readability, and provide code suggestions. All AI-generated outputs were carefully reviewed, and evaluated by the author. The author assumes full responsibility for the content of this thesis. All research ideas, system architecture decisions, methodologies, and scientific conclusions presented are the original work of the author.
 
