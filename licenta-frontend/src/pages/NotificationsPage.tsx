@@ -74,6 +74,13 @@ function NotificationsPage() {
 
   useEffect(() => {
     void loadNotifications()
+
+    // Poll for new notifications every 30 seconds for near-real-time updates
+    const intervalId = setInterval(() => {
+      void loadNotifications()
+    }, 30_000)
+
+    return () => clearInterval(intervalId)
   }, [])
 
   const handleAcknowledge = async (notificationId: number, absenceRequestId: number) => {

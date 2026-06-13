@@ -99,17 +99,16 @@ function toInputValue(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function getLeaveWindow(reference = new Date()): { start: Date; end: Date } {
-  const start = new Date(reference.getFullYear(), reference.getMonth() + 1, 1)
-  const end = new Date(reference.getFullYear(), reference.getMonth() + 2, 0)
-  return { start, end }
+function getLeaveWindow(reference = new Date()): { start: Date } {
+  const start = new Date(reference.getFullYear(), reference.getMonth() + 2, 1)
+  return { start }
 }
 
-function isWithinLeaveWindow(startValue: string, endValue: string, windowStart: Date, windowEnd: Date): boolean {
+function isWithinLeaveWindow(startValue: string, endValue: string, windowStart: Date): boolean {
   const start = toInputDate(startValue)
   const end = toInputDate(endValue)
   if (!start || !end) return false
-  return start >= windowStart && end <= windowEnd
+  return start >= windowStart
 }
 
 function MyShiftsPage() {
@@ -138,7 +137,6 @@ function MyShiftsPage() {
   const [leaveResult, setLeaveResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const leaveWindow = useMemo(() => getLeaveWindow(), [])
   const leaveWindowStart = useMemo(() => toInputValue(leaveWindow.start), [leaveWindow])
-  const leaveWindowEnd = useMemo(() => toInputValue(leaveWindow.end), [leaveWindow])
 
   useEffect(() => {
     const load = async () => {
@@ -404,7 +402,7 @@ function MyShiftsPage() {
           <div className="modal-card">
             <h2 id="leave-modal-title">Request Leave</h2>
             <p className="modal-desc">
-              Requests are allowed only for {leaveWindow.start.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}.
+              Requests are allowed starting from {leaveWindow.start.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}.
             </p>
             <div className="leave-grid">
               <label className="modal-label" htmlFor="leave-start">
@@ -417,7 +415,6 @@ function MyShiftsPage() {
                 value={leaveStart}
                 onChange={(event) => setLeaveStart(event.target.value)}
                 min={leaveWindowStart}
-                max={leaveWindowEnd}
                 disabled={leaveSubmitting}
               />
               <label className="modal-label" htmlFor="leave-end">
@@ -430,7 +427,6 @@ function MyShiftsPage() {
                 value={leaveEnd}
                 onChange={(event) => setLeaveEnd(event.target.value)}
                 min={leaveWindowStart}
-                max={leaveWindowEnd}
                 disabled={leaveSubmitting}
               />
             </div>
@@ -457,9 +453,9 @@ function MyShiftsPage() {
                 Requested days exceed your remaining leave balance.
               </p>
             ) : null}
-            {leaveStart && leaveEnd && !isWithinLeaveWindow(leaveStart, leaveEnd, leaveWindow.start, leaveWindow.end) ? (
+            {leaveStart && leaveEnd && !isWithinLeaveWindow(leaveStart, leaveEnd, leaveWindow.start) ? (
               <p className="modal-result error" role="alert">
-                Leave requests are only allowed for the next month.
+                Leave requests are only allowed starting from the second next month.
               </p>
             ) : null}
             {employeeProfile && (employeeProfile.remainingLeaveDays ?? 0) <= 0 ? (
